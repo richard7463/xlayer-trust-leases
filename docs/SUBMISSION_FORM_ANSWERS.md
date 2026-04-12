@@ -26,7 +26,7 @@ Richard — builder — ritsuyan4763@gmail.com
 
 ## GitHub Repository Link
 
-Fill after repo creation. Target repo name: `xlayer-trust-leases`
+https://github.com/richard7463/xlayer-trust-leases
 
 ## OnchainOS Usage
 
