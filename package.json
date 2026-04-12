@@ -1,0 +1,30 @@
+{
+  "name": "xlayer-trust-leases",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "lease:issue": "node --import tsx scripts/issue-lease.ts",
+    "round:live": "node --import tsx scripts/live-round.ts",
+    "status:latest": "node --import tsx scripts/status-latest.ts",
+    "preflight:treasury": "node --import tsx scripts/treasury-preflight.ts",
+    "operator:status": "node --import tsx scripts/operator-command.ts status",
+    "operator:pause": "node --import tsx scripts/operator-command.ts pause",
+    "operator:review": "node --import tsx scripts/operator-command.ts review",
+    "operator:resume": "node --import tsx scripts/operator-command.ts resume",
+    "proof:render": "node --import tsx scripts/render-proof.ts",
+    "demo:prepare": "npm run lease:issue && npm run operator:resume -- \"demo baseline\" && npm run round:live && npm run proof:render",
+    "demo:serve": "node --import tsx scripts/serve-demo.ts"
+  },
+  "dependencies": {
+    "viem": "^2.44.4",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.19.4",
+    "typescript": "^5.5.4"
+  }
+}
