@@ -28,19 +28,19 @@ type SubmissionPageProps = {
 function modeMeaning(mode?: string | null): string {
   switch (mode) {
     case 'active':
-      return 'Agent may execute within the lease limits.';
+      return 'Agent may execute if each request stays inside your rule.';
     case 'review':
-      return 'Agent requests should stop at review before execution.';
+      return 'Every request should pause for human review before execution.';
     case 'paused':
-      return 'Agent execution is paused until you resume it.';
+      return 'Execution is stopped until you press Resume.';
     default:
-      return 'No active operator posture has been recorded yet.';
+      return 'No operator mode has been set yet.';
   }
 }
 
 function nextGateLabel(mode?: string | null, leaseStatus?: string | null): string {
   if (leaseStatus !== 'active') {
-    return 'Nothing can execute until a fresh active lease exists.';
+    return 'No action can execute until you issue an active rule.';
   }
   switch (mode) {
     case 'review':
@@ -52,45 +52,6 @@ function nextGateLabel(mode?: string | null, leaseStatus?: string | null): strin
     default:
       return 'Operator posture is not set yet.';
   }
-}
-
-function EmptyDashboard({ lease, operatorMode }: { lease: ProofPacket['lease'] | null; operatorMode?: string | null }) {
-  const leaseState = deriveLeaseState(lease, operatorMode ?? undefined);
-
-  return (
-    <div className="card">
-      <h2>Current Live Control</h2>
-      <p>
-        A lease may exist, but there is no fresh governed request attached to it yet. Use the console above to issue a lease or refresh the proof.
-      </p>
-      <div className="info-grid">
-        <div className="info-card">
-          <div className="k">Protected Wallet</div>
-          <div className="v mono">{shortHash(lease?.walletAddress)}</div>
-        </div>
-        <div className="info-card">
-          <div className="k">Lease Status</div>
-          <div className="v">{leaseState.label}</div>
-        </div>
-        <div className="info-card">
-          <div className="k">Operator Mode</div>
-          <div className="v">{titleCase(operatorMode ?? 'idle')}</div>
-        </div>
-        <div className="info-card">
-          <div className="k">Daily Budget</div>
-          <div className="v">{formatUsd(lease?.dailyBudgetUsd ?? 0)}</div>
-        </div>
-        <div className="info-card">
-          <div className="k">Expires</div>
-          <div className="v">{formatTimestamp(lease?.expiresAt)}</div>
-        </div>
-        <div className="info-card">
-          <div className="k">What To Do Next</div>
-          <div className="v">{nextGateLabel(operatorMode, lease?.status)}</div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function SubmissionPage({
@@ -140,15 +101,15 @@ export function SubmissionPage({
         </div>
         <div className="topbar-left">
           <span className="topbar-label">Product</span>
-          <span className="topbar-value">Trust Leases</span>
+          <span className="topbar-value">Boundless</span>
         </div>
       </div>
 
       <header className="header">
         <div className="logo">
-          <div className="logo-icon">T</div>
+          <div className="logo-icon">B</div>
           <div>
-            <div className="logo-text">Trust Leases</div>
+            <div className="logo-text">Boundless</div>
             <div className="logo-sub">Agent Execution Guard</div>
           </div>
         </div>
@@ -163,81 +124,53 @@ export function SubmissionPage({
       </header>
 
       <div className="card">
-        <h2>How Lease Works</h2>
+        <h2>How This Works</h2>
         <p>
-          Connect a wallet at the top-right, then issue a lease. The lease is the boundary the agent must obey.
+          Boundless — Let agents run, within your rules, budget, and verifiable proof.
         </p>
-        <div className="info-grid">
-          <div className="info-card">
-            <div className="k">Per-Tx Max</div>
-            <div className="v">{formatUsd(liveLease?.perTxUsd ?? 3)} per action</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Daily Budget</div>
-            <div className="v">{formatUsd(liveLease?.dailyBudgetUsd ?? 15)} per day</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Allowed Assets</div>
-            <div className="v">{liveLease?.allowedAssets?.join(', ') || 'USDT0, USDC, OKB'}</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Allowed Protocols</div>
-            <div className="v">{liveLease?.allowedProtocols?.join(', ') || 'okx-aggregator, quickswap'}</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Expiry</div>
-            <div className="v">{formatTimestamp(liveLease?.expiresAt)}</div>
-          </div>
-        </div>
+        <p>
+          Connect a wallet on the top-right, set a spending rule, then issue it onchain. The agent can only act inside that rule.
+        </p>
+        <ol className="guide-list">
+          <li>Choose the wallet to protect.</li>
+          <li>Set rule limits: per-action max, daily budget, assets, and protocols.</li>
+          <li>Issue rule to X Layer contract.</li>
+          <li>Watch every request become approve, resize, or block with proof.</li>
+        </ol>
       </div>
 
       <div className="card">
         <div className="section-heading">
           <div>
-            <h2>Current Live Control</h2>
+            <h2>Current Live Rule</h2>
             <p className="section-copy">
-              This is the only part that answers: “What wallet is protected right now, and what may the agent do right now?”
+              This section answers one question: what can the agent do right now?
             </p>
           </div>
           <div className="status-row">
-            <span className={`pill ${leaseState.tone}`}>Lease: {leaseState.label}</span>
+            <span className={`pill ${leaseState.tone}`}>Rule: {leaseState.label}</span>
             <span className={`pill ${currentMode === 'active' ? 'ok' : 'warn'}`}>Operator: {titleCase(currentMode ?? 'idle')}</span>
             <span className="pill ok">Controller: {controller.source === 'onchain' ? 'Onchain' : 'Local'}</span>
           </div>
         </div>
 
-        <div className="info-grid">
-          <div className="info-card">
-            <div className="k">Protected Wallet</div>
-            <div className="v mono">{shortHash(liveLease?.walletAddress)}</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Live Lease ID</div>
-            <div className="v mono">{shortHash(liveLease?.leaseId)}</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Current Operator Mode</div>
-            <div className="v">{titleCase(currentMode ?? 'idle')}</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Max Per Action</div>
-            <div className="v">{formatUsd(liveLease?.perTxUsd ?? 0)}</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Daily Budget</div>
-            <div className="v">{formatUsd(dailyBudgetUsd)}</div>
-          </div>
-          <div className="info-card">
-            <div className="k">Next Request Rule</div>
-            <div className="v">{nextGateLabel(currentMode, liveLease?.status)}</div>
-          </div>
+        <div className="stack-list">
+          <div className="stack-row"><span className="stack-k">Protected Wallet</span><span className="stack-v mono">{shortHash(liveLease?.walletAddress)}</span></div>
+          <div className="stack-row"><span className="stack-k">Rule ID</span><span className="stack-v mono">{shortHash(liveLease?.leaseId)}</span></div>
+          <div className="stack-row"><span className="stack-k">Max Per Action</span><span className="stack-v">{formatUsd(liveLease?.perTxUsd ?? 0)}</span></div>
+          <div className="stack-row"><span className="stack-k">Daily Budget</span><span className="stack-v">{formatUsd(dailyBudgetUsd)}</span></div>
+          <div className="stack-row"><span className="stack-k">Allowed Assets</span><span className="stack-v">{liveLease?.allowedAssets?.join(', ') || 'Not loaded yet'}</span></div>
+          <div className="stack-row"><span className="stack-k">Allowed Protocols</span><span className="stack-v">{liveLease?.allowedProtocols?.join(', ') || 'Not loaded yet'}</span></div>
+          <div className="stack-row"><span className="stack-k">Expiry</span><span className="stack-v">{formatTimestamp(liveLease?.expiresAt)}</span></div>
+          <div className="stack-row"><span className="stack-k">Current Operator Mode</span><span className="stack-v">{titleCase(currentMode ?? 'idle')}</span></div>
+          <div className="stack-row"><span className="stack-k">If Agent Requests Now</span><span className="stack-v">{nextGateLabel(currentMode, liveLease?.status)}</span></div>
         </div>
 
         <div className="budget-panel">
           <div className="budget-panel-copy">
-            <div className="budget-panel-title">Current Budget Envelope</div>
+            <div className="budget-panel-title">Budget Envelope</div>
             <div className="budget-panel-text">
-              If the next agent request exceeds the budget or violates the lease, the system should resize it or block it before execution.
+              If the next request breaks this rule, the system should resize it or block it before execution.
             </div>
           </div>
           <div className="budget-panel-values">
@@ -270,100 +203,33 @@ export function SubmissionPage({
         controllerNote={controller.note}
       />
 
-      <div className="grid-2">
-        <div className="card">
-          <h2>Current Agent Rules</h2>
-          <p>
-            These are the boundaries the agent is supposed to stay inside before any new onchain action is allowed.
-          </p>
-          <div className="info-grid">
-            <div className="info-card">
-              <div className="k">Allowed Assets</div>
-              <div className="v">{liveLease?.allowedAssets?.join(', ') || 'Not loaded yet'}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Allowed Protocols</div>
-              <div className="v">{liveLease?.allowedProtocols?.join(', ') || 'Not loaded yet'}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Lease Expires</div>
-              <div className="v">{formatTimestamp(liveLease?.expiresAt)}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Consumer</div>
-              <div className="v">{liveLease?.consumerName ?? 'Not loaded yet'}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Controller Contract</div>
-              <div className="v mono">{shortHash(controller.address ?? undefined)}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Hosted Writes</div>
-              <div className="v">{controller.actionsEnabled ? 'Enabled' : 'Read only'}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <h2>Current Human Override</h2>
-          <p>
-            This is what your operator posture means right now.
-          </p>
-          <div className="info-grid">
-            <div className="info-card">
-              <div className="k">Operator Mode</div>
-              <div className="v">{titleCase(currentMode ?? 'idle')}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Meaning</div>
-              <div className="v">{modeMeaning(currentMode)}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">If Agent Requests A Trade</div>
-              <div className="v">{nextGateLabel(currentMode, liveLease?.status)}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="card">
-        <h2>What Happens Next</h2>
-        <div className="info-grid">
-          <div className="info-card">
-            <div className="k">1. Agent asks</div>
-            <div className="v">The agent proposes an action inside this wallet.</div>
-          </div>
-          <div className="info-card">
-            <div className="k">2. Lease checks</div>
-            <div className="v">Budget, wallet, asset, protocol, and operator posture are checked.</div>
-          </div>
-          <div className="info-card">
-            <div className="k">3. System decides</div>
-            <div className="v">Approve, resize, or block.</div>
-          </div>
-          <div className="info-card">
-            <div className="k">4. Proof appears</div>
-            <div className="v">A tx hash or blocked reason is recorded as evidence.</div>
-          </div>
+        <h2>What Your Operator Mode Means</h2>
+        <div className="stack-list">
+          <div className="stack-row"><span className="stack-k">Current Mode</span><span className="stack-v">{titleCase(currentMode ?? 'idle')}</span></div>
+          <div className="stack-row"><span className="stack-k">Meaning</span><span className="stack-v">{modeMeaning(currentMode)}</span></div>
+          <div className="stack-row"><span className="stack-k">Next Request</span><span className="stack-v">{nextGateLabel(currentMode, liveLease?.status)}</span></div>
+          <div className="stack-row"><span className="stack-k">Controller Contract</span><span className="stack-v mono">{shortHash(controller.address ?? undefined)}</span></div>
+          <div className="stack-row"><span className="stack-k">Hosted Writes</span><span className="stack-v">{controller.actionsEnabled ? 'Enabled' : 'Read only'}</span></div>
         </div>
       </div>
 
       {showHistoricalMismatch ? (
         <div className="response-banner history-banner">
-          Historical proof below is from an older lease, not the wallet currently protected above.
+          Historical proof below is from an older rule, not the wallet currently protected above.
           Current live wallet: {shortHash(liveLease?.walletAddress)}.
           Historical proof wallet: {shortHash(historicalWallet ?? undefined)}.
-          Current live lease: {shortHash(liveLease?.leaseId)}.
-          Historical proof lease: {shortHash(historicalLeaseId ?? undefined)}.
+          Current live rule: {shortHash(liveLease?.leaseId)}.
+          Historical rule: {shortHash(historicalLeaseId ?? undefined)}.
         </div>
       ) : null}
 
       <div className="card">
         <div className="section-heading">
           <div>
-            <h2>Historical Proof</h2>
+            <h2>Latest Proof Snapshot</h2>
             <p className="section-copy">
-              This section shows what the system has already proven before: real approved executions and real blocked events.
+              This is the latest confirmed result in the system: approved execution or blocked request.
             </p>
           </div>
           {historicalReferencePacket ? (
@@ -377,120 +243,25 @@ export function SubmissionPage({
         </div>
       </div>
 
-      <div className="grid-2">
-        <div className="card">
-          <h2>Most Recent Historical Approved Execution</h2>
-          <div className="info-grid">
-            <div className="info-card">
-              <div className="k">Round Time</div>
-              <div className="v">{formatTimestamp(latestSuccessPacket?.generatedAt ?? latestSuccessRound?.generatedAt)}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Wallet</div>
-              <div className="v mono">{shortHash(latestSuccessPacket?.lease.walletAddress)}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Tx Hash</div>
-              <div className="v mono">{shortHash(latestSuccessPacket?.execution.txHash ?? latestSuccessRound?.txHash)}</div>
-            </div>
-          </div>
-          <p style={{ marginTop: '16px', marginBottom: 0 }}>
-            {latestSuccessPacket?.execution.note ?? 'No successful governed execution has been recorded yet.'}
-          </p>
-        </div>
-
-        <div className="card">
-          <h2>Most Recent Historical Blocked Request</h2>
-          <div className="info-grid">
-            <div className="info-card">
-              <div className="k">Round Time</div>
-              <div className="v">{formatTimestamp(latestBlockedPacket?.generatedAt ?? latestBlockedRound?.generatedAt)}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Wallet</div>
-              <div className="v mono">{shortHash(latestBlockedPacket?.lease.walletAddress)}</div>
-            </div>
-            <div className="info-card">
-              <div className="k">Blocked Because</div>
-              <div className="v">{titleCase((latestBlockedPacket?.decision.policyHits?.[0] ?? 'n/a').replaceAll('_', ' '))}</div>
-            </div>
-          </div>
-          <p style={{ marginTop: '16px', marginBottom: 0 }}>
-            {latestBlockedPacket?.decision.rationale ?? 'No blocked guardrail event has been recorded yet.'}
-          </p>
-        </div>
-      </div>
-
       {historicalReferencePacket ? (
-        <div className="grid-2">
-          <div className="card">
-            <h2>Historical Request Detail</h2>
-            <div className="info-grid">
-              <div className="info-card">
-                <div className="k">Action</div>
-                <div className="v">{titleCase(historicalReferencePacket.request.action)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">From → To</div>
-                <div className="v">{historicalReferencePacket.request.fromToken} → {historicalReferencePacket.request.toToken}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Venue</div>
-                <div className="v">{historicalReferencePacket.request.venueHint}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Requested</div>
-                <div className="v">{formatUsd(historicalReferencePacket.request.notionalUsd)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Allowed</div>
-                <div className="v">{formatUsd(historicalReferencePacket.decision.finalNotionalUsd)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Historical Tx</div>
-                <div className="v mono">{shortHash(historicalReferencePacket.execution.txHash)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h2>Historical Authority And Receipt</h2>
-            <div className="info-grid">
-              <div className="info-card">
-                <div className="k">Historical Lease</div>
-                <div className="v mono">{shortHash(historicalReferencePacket.lease.leaseId)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Historical Wallet</div>
-                <div className="v mono">{shortHash(historicalReferencePacket.lease.walletAddress)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Receipt Status</div>
-                <div className="v">{titleCase(historicalReferencePacket.receipt.status)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Spent This Tx</div>
-                <div className="v">{formatUsd(historicalReferencePacket.receipt.spentUsd)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Request ID</div>
-                <div className="v mono">{shortHash(historicalReferencePacket.request.requestId)}</div>
-              </div>
-              <div className="info-card">
-                <div className="k">Reason</div>
-                <div className="v">{historicalReferencePacket.decision.rationale}</div>
-              </div>
-            </div>
+        <div className="card">
+          <h2>Latest Request Detail</h2>
+          <div className="stack-list">
+            <div className="stack-row"><span className="stack-k">Action</span><span className="stack-v">{titleCase(historicalReferencePacket.request.action)}</span></div>
+            <div className="stack-row"><span className="stack-k">From → To</span><span className="stack-v">{historicalReferencePacket.request.fromToken} → {historicalReferencePacket.request.toToken}</span></div>
+            <div className="stack-row"><span className="stack-k">Venue</span><span className="stack-v">{historicalReferencePacket.request.venueHint}</span></div>
+            <div className="stack-row"><span className="stack-k">Requested</span><span className="stack-v">{formatUsd(historicalReferencePacket.request.notionalUsd)}</span></div>
+            <div className="stack-row"><span className="stack-k">Allowed</span><span className="stack-v">{formatUsd(historicalReferencePacket.decision.finalNotionalUsd)}</span></div>
+            <div className="stack-row"><span className="stack-k">Tx Hash</span><span className="stack-v mono">{shortHash(historicalReferencePacket.execution.txHash)}</span></div>
+            <div className="stack-row"><span className="stack-k">Decision Reason</span><span className="stack-v">{historicalReferencePacket.decision.rationale}</span></div>
           </div>
         </div>
-      ) : (
-        <EmptyDashboard lease={lease} operatorMode={currentMode} />
-      )}
+      ) : null}
 
-      <div className="card">
-        <h2>Historical Lease Rounds</h2>
+      <details className="card advanced-panel">
+        <summary>Advanced History (Optional)</summary>
         <p>
-          These rows are a history log. They are not always the current live lease above.
+          These rows are full history logs and may include older rules and older wallets.
         </p>
         <table>
           <thead>
@@ -522,7 +293,7 @@ export function SubmissionPage({
             )}
           </tbody>
         </table>
-      </div>
+      </details>
 
       <div className="footer">
         Built on <a href="#">X Layer</a> · Reads the controller contract plus runtime proof artifacts

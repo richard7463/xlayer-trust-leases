@@ -31,17 +31,17 @@ const ACTION_GROUPS: Array<{
   actions: Array<{ action: ControlAction; label: string; help: string; tone?: 'primary' | 'warn' | 'neutral' }>;
 }> = [
   {
-    label: 'Lease',
+    label: 'Rule',
     actions: [
-      { action: 'issue-lease', label: 'Issue Lease', help: 'Write or replace this lease on X Layer with the parameters above.', tone: 'primary' },
-      { action: 'revoke-lease', label: 'Revoke', help: 'Cancel the current lease immediately.', tone: 'warn' },
+      { action: 'issue-lease', label: 'Save Rule', help: 'Write or replace this rule on X Layer with the settings above.', tone: 'primary' },
+      { action: 'revoke-lease', label: 'Disable Rule', help: 'Cancel the current rule immediately.', tone: 'warn' },
     ],
   },
   {
     label: 'Operator',
     actions: [
       { action: 'pause', label: 'Pause', help: 'Stop autonomous execution until resumed.', tone: 'warn' },
-      { action: 'review', label: 'Review', help: 'Require manual review before execution.', tone: 'warn' },
+      { action: 'review', label: 'Review', help: 'Force manual review before execution.', tone: 'warn' },
       { action: 'resume', label: 'Resume', help: 'Return to active governed execution.', tone: 'primary' },
     ],
   },
@@ -150,7 +150,7 @@ export function OperatorConsole({
 
   const meta = useMemo(
     () => [
-      `Lease: ${leaseId ?? 'none'}`,
+      `Rule: ${leaseId ?? 'none'}`,
       `Status: ${leaseStatus ?? 'not issued'}`,
       `Operator: ${operatorMode ?? 'idle'}`,
       controllerAddress ? `Controller: ${controllerSource === 'onchain' ? 'X Layer' : 'Local'} ${controllerAddress}` : 'Controller: local runtime',
@@ -171,7 +171,7 @@ export function OperatorConsole({
     if (action === 'issue-lease') {
       if (!walletAddress.trim().startsWith('0x')) {
         setBusyAction(null);
-        setError('Set a valid governed wallet address before issuing a lease.');
+        setError('Set a valid wallet address before saving the rule.');
         return;
       }
       if (!Number.isFinite(perTxValue) || perTxValue <= 0 || !Number.isFinite(dailyValue) || dailyValue <= 0) {
@@ -224,9 +224,9 @@ export function OperatorConsole({
 
   return (
     <div className="card">
-      <h2>Lease Control Console</h2>
+      <h2>Rule Console</h2>
       <p>
-        Configure the lease first, then issue it onchain. This is where you define budget, allowed assets, allowed protocols, and expiry for agent execution.
+        Set the wallet, budget, assets, protocols, and expiry first. Then save the rule onchain.
       </p>
 
       <div className="action-meta">
@@ -242,7 +242,7 @@ export function OperatorConsole({
             id="governed-wallet"
             value={walletAddress}
             onChange={(event) => setWalletAddress(event.target.value)}
-            placeholder="0x wallet controlled by lease policy"
+            placeholder="0x wallet protected by this rule"
             className="note-input mono"
           />
         </div>
@@ -314,7 +314,7 @@ export function OperatorConsole({
           id="operator-note"
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="optional lease note or operator command reason"
+          placeholder="optional rule note or operator command reason"
           className="note-input"
         />
       </div>

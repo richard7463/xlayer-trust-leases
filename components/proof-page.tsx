@@ -32,21 +32,21 @@ function EmptyProof({ lease }: { lease: ProofPacket['lease'] | null }) {
       <h2>No Proof Packet Yet</h2>
       <p>
         {lease
-          ? 'A lease exists, but there is no generated proof packet to inspect yet.'
-          : 'The proof view has no lease or round artifacts to render.'}
+          ? 'A rule exists, but there is no generated proof packet to inspect yet.'
+          : 'The proof view has no rule or round artifacts to render.'}
       </p>
       <div className="info-grid">
         <div className="info-card">
-          <div className="k">Lease Status</div>
+          <div className="k">Rule Status</div>
           <div className="v">{leaseState.label}</div>
         </div>
         <div className="info-card">
-          <div className="k">Lease ID</div>
+          <div className="k">Rule ID</div>
           <div className="v mono">{shortHash(lease?.leaseId)}</div>
         </div>
         <div className="info-card">
           <div className="k">Next Step</div>
-          <div className="v">Use the Operator Console to issue a lease and run a round</div>
+          <div className="v">Use the Operator Console to issue a rule and run a round</div>
         </div>
       </div>
     </div>
@@ -60,9 +60,9 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
   const zoneTone = toneForTrustZone(packet?.decision.trustZone);
   const executionTone = toneForExecution(packet?.execution.status);
   const flow = [
-    { step: '1', title: 'Issue Lease', desc: 'Human sets wallet, scope, budget, expiry' },
+    { step: '1', title: 'Issue Rule', desc: 'Human sets wallet, scope, budget, expiry' },
     { step: '2', title: 'Agent Request', desc: 'Consumer submits a structured request' },
-    { step: '3', title: 'Lease Checks', desc: 'Policy gates run before execution' },
+    { step: '3', title: 'Rule Checks', desc: 'Policy gates run before execution' },
     { step: '4', title: 'Decision', desc: 'Approve, resize, block, or require review' },
     { step: '5', title: 'Receipt', desc: 'Round writes proof and optional tx hash' }
   ];
@@ -83,9 +83,9 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
       <header className="header">
         <div className="logo">
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div className="logo-icon">T</div>
+            <div className="logo-icon">B</div>
             <div>
-              <div className="logo-text">Trust Leases</div>
+              <div className="logo-text">Boundless</div>
               <div className="logo-sub">Proof Dashboard</div>
             </div>
           </Link>
@@ -114,7 +114,7 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
       <div className="card">
         <h2>Onchain Controller State</h2>
         <p>
-          This is where the chain work shows up in the product: the dashboard reads the active lease, operator posture,
+          This is where the chain work shows up in the product: the dashboard reads the active rule, operator posture,
           and latest receipt anchor from the X Layer controller before falling back to bundled proof data.
         </p>
         <div className="info-grid">
@@ -178,7 +178,7 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
       </div>
 
       <div className="status-row">
-        <span className={`pill ${leaseState.tone}`}>Lease: {leaseState.label}</span>
+        <span className={`pill ${leaseState.tone}`}>Rule: {leaseState.label}</span>
         <span className={`pill ${executionTone}`}>Execution: {packet ? titleCase(packet.execution.status) : 'Pending'}</span>
         <span className={`pill ${outcomeTone}`}>Decision: {packet ? titleCase(packet.decision.outcome) : 'None'}</span>
         <span className={`pill ${zoneTone}`}>Zone: {packet ? titleCase(packet.decision.trustZone) : 'Unknown'}</span>
@@ -188,7 +188,7 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
         <>
           <div className="stats-bar">
             <div className="stat-card">
-              <div className="stat-label">Lease ID</div>
+              <div className="stat-label">Rule ID</div>
               <div className="stat-value">{shortHash(packet.lease.leaseId)}</div>
               <div className="stat-note">{packet.lease.consumerName}</div>
             </div>
@@ -225,10 +225,10 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
           </div>
 
           <div className="card">
-            <h2>Lease Envelope</h2>
+            <h2>Rule Envelope</h2>
             <div className="info-grid">
               <div className="info-card">
-                <div className="k">Lease ID</div>
+                <div className="k">Rule ID</div>
                 <div className="v mono">{shortHash(packet.lease.leaseId)}</div>
               </div>
               <div className="info-card">

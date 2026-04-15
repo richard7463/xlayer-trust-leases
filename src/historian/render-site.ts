@@ -155,7 +155,7 @@ export function buildSubmissionHtml(input: {
 export function buildSiteIndexHtml(): string {
   return `<!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8" /><meta http-equiv="refresh" content="0; url=./submission.html" /><title>X Layer Trust Leases</title></head>
+  <head><meta charset="utf-8" /><meta http-equiv="refresh" content="0; url=./submission.html" /><title>Boundless</title></head>
   <body><p>Redirecting to <a href="./submission.html">submission.html</a>...</p></body>
 </html>`;
 }

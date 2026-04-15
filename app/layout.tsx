@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'X Layer Trust Leases — Execution Lease',
-  description: 'Temporary, bounded, revocable execution authority for X Layer agents.'
+  title: 'Boundless — Agent Execution Guard',
+  description: 'Boundless — Let agents run, within your rules, budget, and verifiable proof.'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

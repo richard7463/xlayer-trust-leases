@@ -1,17 +1,17 @@
-# X Layer Trust Leases
+# Boundless
 
 ![Track](https://img.shields.io/badge/Track-Build%20X%20Skills%20Arena-0f766e)
 ![Skill](https://img.shields.io/badge/Skill-Pre-Execution%20Governance-111827)
 ![Network](https://img.shields.io/badge/Network-X%20Layer%20196-2563eb)
 ![Proof](https://img.shields.io/badge/Live%20Proof-Apr%2015%202026-success)
 
-The safe way to give agents real money on X Layer.
+Boundless — Let agents run, within your rules, budget, and verifiable proof.
 
-X Layer Trust Leases is a product for one simple problem:
+Boundless is a product for one simple problem:
 
 How do you let an agent execute real onchain actions, but only within limits you choose?
 
-Instead of giving an agent full wallet access, Trust Leases lets a human issue a temporary permission slip with hard boundaries:
+Instead of giving an agent full wallet access, Boundless lets a human issue a temporary permission slip with hard boundaries:
 
 - which wallet the agent can use
 - which assets and protocols it can touch
@@ -35,13 +35,13 @@ It is a control layer for real agent execution on X Layer.
 
 ## 30-Second Pitch
 
-X Layer Trust Leases lets a human give an agent limited, temporary permission to execute on X Layer.
+Boundless lets a human give an agent limited, temporary permission to execute on X Layer.
 
 The flow is simple:
 
 1. a human issues a lease
 2. the agent submits a request
-3. Trust Leases checks the request against the wallet, assets, protocols, budget, counterparties, and expiry
+3. Boundless checks the request against the wallet, assets, protocols, budget, counterparties, and expiry
 4. only valid requests are allowed to execute
 5. the system writes back proof and receipt data
 
@@ -51,7 +51,7 @@ This project is the missing middle between:
 
 ## How a User Manages a Wallet
 
-Trust Leases does not ask a user to give an agent unlimited wallet access.
+Boundless does not ask a user to give an agent unlimited wallet access.
 
 The user flow is:
 
@@ -256,7 +256,7 @@ sequenceDiagram
 
 ## What Makes It Different
 
-| Typical agent wallet flow | Trust Leases |
+| Typical agent wallet flow | Boundless |
 |---|---|
 | Agent gets broad wallet access | Agent gets a bounded lease |
 | Review happens after execution | Governance happens before broadcast |

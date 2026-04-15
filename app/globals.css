@@ -926,17 +926,17 @@ td {
 }
 .action-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 .action-groups {
   display: grid;
-  grid-template-columns: 1.05fr 1.3fr 1.05fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 .lease-config-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px 12px;
   margin-bottom: 12px;
 }
@@ -1016,6 +1016,54 @@ td {
   color: var(--s2);
   line-height: 1.5;
 }
+.guide-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--s1);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.guide-list li + li {
+  margin-top: 4px;
+}
+.stack-list {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.01);
+}
+.stack-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.stack-row:last-child {
+  border-bottom: none;
+}
+.stack-k {
+  color: var(--s2);
+  font-size: 12px;
+  min-width: 164px;
+}
+.stack-v {
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+.advanced-panel > summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--lime);
+}
+.advanced-panel[open] > summary {
+  margin-bottom: 14px;
+}
 
 @media (max-width: 700px) {
   .lease-config-grid {
@@ -1037,5 +1085,15 @@ td {
   }
   .nav-wallet-btn {
     width: 100%;
+  }
+  .stack-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stack-k {
+    min-width: 0;
+  }
+  .stack-v {
+    text-align: left;
   }
 }

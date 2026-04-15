@@ -32,10 +32,10 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
     <div className="app">
       <header className="header">
         <div className="logo">
-          <div className="logo-icon">T</div>
+          <div className="logo-icon">B</div>
           <div>
-            <div className="logo-text">Trust Leases</div>
-            <div className="logo-sub">X Layer Agent Guard</div>
+            <div className="logo-text">Boundless</div>
+            <div className="logo-sub">Agent Execution Guard</div>
           </div>
         </div>
         <nav className="nav">
@@ -47,12 +47,12 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
 
       <section className="hero">
         <h1>
-          Give Agents a <span>Lease</span>,<br />
-          Not Your Wallet
+          <span>Boundless</span><br />
+          Rules First, Agents Run
         </h1>
         <p>
-          Temporary authority for an agent on X Layer, bounded by wallet, budget, protocol, counterparty, and expiry.
-          Every round writes a proof packet instead of hiding behind a static demo.
+          Boundless — Let agents run, within your rules, budget, and verifiable proof.
+          Give an agent bounded permission without giving away full wallet control.
         </p>
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link href="/submission" className="btn-lime">
@@ -68,7 +68,7 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
         <div className="card">
           <h2>What the user actually does</h2>
           <p>
-            The user picks a governed wallet, issues a lease with budget and route limits, then lets the agent submit requests.
+            The user picks a governed wallet, issues a rule with budget and route limits, then lets the agent submit requests.
             The agent never gets unlimited wallet authority from this app.
           </p>
           <div className="info-grid">
@@ -77,7 +77,7 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
               <div className="v mono">{shortHash(liveLease?.walletAddress)}</div>
             </div>
             <div className="info-card">
-              <div className="k">Lease Limit</div>
+              <div className="k">Rule Limit</div>
               <div className="v">{formatUsd(liveLease?.perTxUsd ?? 0)} per request</div>
             </div>
             <div className="info-card">
@@ -112,11 +112,11 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
 
       <div className="stats-bar">
         <div className="stat-card">
-          <div className="stat-label">Lease State</div>
+          <div className="stat-label">Rule State</div>
           <div className={`stat-value ${leaseState.tone === 'ok' ? 'green' : leaseState.tone === 'warn' ? 'amber' : ''}`}>
             {leaseState.label}
           </div>
-          <div className="stat-note">{liveLease ? shortHash(liveLease.leaseId) : 'No lease file yet'}</div>
+          <div className="stat-note">{liveLease ? shortHash(liveLease.leaseId) : 'No rule file yet'}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Per-Tx Limit</div>
@@ -193,12 +193,12 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
           <h2>No Live Proof Yet</h2>
           <p>
             {liveLease
-              ? 'A lease file exists, but no round has written a live proof packet yet.'
-              : 'This app has no generated lease or round data yet.'}
+              ? 'A rule exists, but no round has written a live proof packet yet.'
+              : 'This app has no generated rule or round data yet.'}
           </p>
           <div className="info-grid">
             <div className="info-card">
-              <div className="k">Lease</div>
+              <div className="k">Rule</div>
               <div className="v mono">{shortHash(liveLease?.leaseId)}</div>
             </div>
             <div className="info-card">
@@ -207,7 +207,7 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
             </div>
             <div className="info-card">
               <div className="k">Next Step</div>
-              <div className="v">Open Dashboard to issue a lease and run a governed round</div>
+              <div className="v">Open Dashboard to issue a rule and run a governed round</div>
             </div>
           </div>
         </div>
@@ -216,7 +216,7 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
       <div className="features-grid">
         <div className="feature-card">
           <h3>Wallet Scope</h3>
-          <p>The lease is tied to one wallet address instead of broad account access.</p>
+          <p>The rule is tied to one wallet address instead of broad account access.</p>
         </div>
         <div className="feature-card">
           <h3>Budget Bounds</h3>
@@ -228,7 +228,7 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
         </div>
         <div className="feature-card">
           <h3>Expiry Control</h3>
-          <p>Expired authority now stays expired until a human issues a new lease.</p>
+          <p>Expired authority now stays expired until a human issues a new rule.</p>
         </div>
         <div className="feature-card">
           <h3>Operator Posture</h3>
@@ -243,7 +243,7 @@ export default function LandingPage({ packet, lease, currentOperator, rounds, co
       <div className="final-cta">
         <h2>Open the live surface</h2>
         <p>
-          The dashboard and proof pages now render current lease artifacts instead of fixed demo scenarios.
+          The dashboard and proof pages now render current rule artifacts instead of fixed demo scenarios.
         </p>
         <Link href="/submission" className="btn-lime" style={{ marginTop: '16px' }}>
           Go To Dashboard
