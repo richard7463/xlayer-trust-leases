@@ -11,6 +11,7 @@ export type ControllerConfig = {
   operatorName: string;
   artifactBaseUri?: string;
   chainSyncEnabled: boolean;
+  deployBlock?: bigint;
 };
 
 export type OnchainLeaseSnapshot = {
@@ -51,6 +52,20 @@ export type OnchainReceiptSnapshot = {
   txHash: Hex;
   proofHash: Hex;
   artifactUri: string;
+  timestamp: string | null;
+};
+
+export type OnchainReceiptEvent = {
+  leaseId: string;
+  requestId: string;
+  outcome: OnchainReceiptSnapshot['outcome'];
+  executionStatus: OnchainReceiptSnapshot['executionStatus'];
+  spentUsd: number;
+  txHash: Hex;
+  proofHash: Hex;
+  txHashHex?: string;
+  eventTxHash?: Hex;
+  blockNumber: bigint;
   timestamp: string | null;
 };
 
@@ -237,6 +252,7 @@ export function readControllerConfig(env: NodeJS.ProcessEnv = process.env): Cont
     operatorName: env.LEASE_OPERATOR_NAME || 'human-principal',
     artifactBaseUri: env.LEASE_CONTROLLER_ARTIFACT_BASE_URI || undefined,
     chainSyncEnabled: parseBool(env.LEASE_CHAIN_SYNC_ENABLED, false),
+    deployBlock: env.LEASE_CONTROLLER_DEPLOY_BLOCK ? BigInt(env.LEASE_CONTROLLER_DEPLOY_BLOCK) : undefined,
   };
 }
 
@@ -261,6 +277,7 @@ export function controllerConfigFromRuntimeEnv(env: {
     operatorName: env.LEASE_OPERATOR_NAME,
     artifactBaseUri: env.LEASE_CONTROLLER_ARTIFACT_BASE_URI || undefined,
     chainSyncEnabled: env.LEASE_CHAIN_SYNC_ENABLED,
+    deployBlock: undefined,
   };
 }
 
@@ -448,4 +465,94 @@ export async function readOnchainLatestReceipt(config: ControllerConfig, consume
     artifactUri: result[9],
     timestamp: unixToIso(result[10]),
   };
+}
+
+export async function readRecentOnchainReceipts(
+  config: ControllerConfig,
+  options: {
+    limit?: number;
+    fromBlock?: bigint;
+  } = {},
+): Promise<OnchainReceiptEvent[]> {
+  if (!config.controllerAddress) {
+    return [];
+  }
+
+  const pub = publicClient(config);
+  const eventAbi = trustLeaseControllerAbi.find(
+    (entry) => entry.type === 'event' && entry.name === 'ReceiptAnchored',
+  );
+  if (!eventAbi) {
+    return [];
+  }
+
+  const limit = options.limit ?? 10;
+  const latestBlock = await pub.getBlockNumber();
+  const absoluteFromBlock = options.fromBlock ?? config.deployBlock ?? (latestBlock > BigInt(8000) ? latestBlock - BigInt(8000) : BigInt(0));
+  const chunkSize = BigInt(8000);
+  const collected: Awaited<ReturnType<typeof pub.getLogs>> = [];
+
+  let cursor = latestBlock;
+  while (cursor >= absoluteFromBlock && collected.length < limit) {
+    const chunkFrom = cursor >= chunkSize ? cursor - chunkSize + BigInt(1) : BigInt(0);
+    const fromBlock = chunkFrom > absoluteFromBlock ? chunkFrom : absoluteFromBlock;
+    const logs = await pub.getLogs({
+      address: config.controllerAddress,
+      event: eventAbi,
+      fromBlock,
+      toBlock: cursor,
+    });
+    if (logs.length > 0) {
+      collected.push(...logs);
+    }
+    if (fromBlock === BigInt(0) || fromBlock === absoluteFromBlock) {
+      break;
+    }
+    cursor = fromBlock - BigInt(1);
+  }
+
+  const logs = collected as unknown as Array<{
+    args: {
+      leaseId: string;
+      requestId: string;
+      outcome: number | bigint;
+      executionStatus: number | bigint;
+      spentUsd6: bigint;
+      txHash: Hex;
+      proofHash: Hex;
+    };
+    transactionHash: Hex | null;
+    blockNumber: bigint | null;
+  }>;
+  const blockNumbers = Array.from(new Set(logs.map((log) => log.blockNumber).filter((value): value is bigint => typeof value === 'bigint')));
+  const blocks = new Map<bigint, string>();
+  await Promise.all(
+    blockNumbers.map(async (blockNumber) => {
+      const block = await pub.getBlock({ blockNumber });
+      blocks.set(blockNumber, new Date(Number(block.timestamp) * 1000).toISOString());
+    }),
+  );
+
+  return logs
+    .slice()
+    .reverse()
+    .slice(0, limit)
+    .map((log): OnchainReceiptEvent => {
+      const args = log.args;
+      const txHash = args.txHash;
+      const eventTxHash = log.transactionHash ?? undefined;
+      return {
+        leaseId: args.leaseId,
+        requestId: args.requestId,
+        outcome: outcomeLabel(BigInt(args.outcome)),
+        executionStatus: executionLabel(BigInt(args.executionStatus)),
+        spentUsd: fromUsd6(args.spentUsd6),
+        txHash,
+        proofHash: args.proofHash,
+        txHashHex: txHash !== zeroHash ? txHash : undefined,
+        eventTxHash,
+        blockNumber: log.blockNumber ?? BigInt(0),
+        timestamp: log.blockNumber ? (blocks.get(log.blockNumber) ?? null) : null,
+      };
+    });
 }

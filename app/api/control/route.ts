@@ -1,6 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { NextResponse } from 'next/server';
+import crypto from 'node:crypto';
+import { privateKeyToAccount } from 'viem/accounts';
 import { getSiteData, writeCanonicalLatestIfNeeded } from '@/lib/site-data';
+import { canWriteController, issueLeaseOnchain, readControllerConfig, readOnchainActiveLease, setLeaseStatusOnchain, setOperatorModeOnchain } from '@/lib/trust-lease-controller';
+import { parseCsvList, readRuntimeEnv } from '../../../src/config/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +21,98 @@ function runCommand(args: string[]): string {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env,
   });
+}
+
+function normalizePrivateKey(privateKey?: string): `0x${string}` | undefined {
+  if (!privateKey) {
+    return undefined;
+  }
+  return (privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`) as `0x${string}`;
+}
+
+function getHostedSettlementAddress(env: ReturnType<typeof readRuntimeEnv>): string | undefined {
+  const privateKey = normalizePrivateKey(env.XLAYER_SETTLEMENT_PRIVATE_KEY || env.XLAYER_PRIVATE_KEY);
+  return privateKey ? privateKeyToAccount(privateKey).address : undefined;
+}
+
+function buildHostedLease(env: ReturnType<typeof readRuntimeEnv>, walletAddress: string, note?: string) {
+  const issuedAt = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + env.LEASE_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
+  return {
+    leaseId: `lease_${crypto.randomUUID()}`,
+    issuedAt,
+    expiresAt,
+    status: 'active',
+    ownerLabel: env.LEASE_ISSUER_LABEL,
+    consumerName: env.LEASE_CONSUMER_NAME,
+    walletAddress,
+    baseAsset: env.LEASE_DEFAULT_BASE_ASSET,
+    allowedAssets: parseCsvList(env.LEASE_ALLOWED_ASSETS),
+    allowedProtocols: parseCsvList(env.LEASE_ALLOWED_PROTOCOLS),
+    allowedActions: parseCsvList(env.LEASE_ALLOWED_ACTIONS),
+    counterpartyAllowlist: parseCsvList(env.LEASE_ALLOWED_COUNTERPARTIES),
+    perTxUsd: env.LEASE_PER_TX_USD,
+    dailyBudgetUsd: env.LEASE_DAILY_BUDGET_USD,
+    trustRequirements: {
+      reasonRequired: env.LEASE_REASON_REQUIRED,
+      proofRequired: env.LEASE_REQUIRE_PROOF,
+      operatorCanPause: true,
+      degradedRequiresReview: env.LEASE_REQUIRE_HEALTHY_ROUTE,
+    },
+    notes: note ? [env.LEASE_NOTES, note] : [env.LEASE_NOTES],
+  };
+}
+
+async function runHostedControlAction(action: ControlAction, note?: string) {
+  const env = readRuntimeEnv(process.env);
+  const controllerConfig = readControllerConfig(process.env);
+
+  if (!canWriteController(controllerConfig)) {
+    throw new Error('Hosted control requires a configured X Layer controller writer.');
+  }
+
+  switch (action) {
+    case 'issue-lease': {
+      const activeLease = await readOnchainActiveLease(controllerConfig, env.LEASE_CONSUMER_NAME);
+      if (activeLease?.status === 'active') {
+        await setLeaseStatusOnchain(controllerConfig, activeLease.leaseId, 'revoked', 'superseded by new hosted lease');
+      }
+      const walletAddress = env.XLAYER_TREASURY_ADDRESS || getHostedSettlementAddress(env);
+      if (!walletAddress) {
+        throw new Error('Missing treasury wallet address for hosted lease issuance.');
+      }
+      const issuedLease = buildHostedLease(env, walletAddress, note);
+      const txHash = await issueLeaseOnchain(controllerConfig, issuedLease);
+      return `controller_tx=${txHash}`;
+    }
+    case 'revoke-lease': {
+      const activeLease = await readOnchainActiveLease(controllerConfig, env.LEASE_CONSUMER_NAME);
+      if (!activeLease) {
+        throw new Error('No active onchain lease to revoke.');
+      }
+      const txHash = await setLeaseStatusOnchain(controllerConfig, activeLease.leaseId, 'revoked', note);
+      return `controller_tx=${txHash}`;
+    }
+    case 'pause':
+    case 'review':
+    case 'resume': {
+      const mode = action === 'pause' ? 'paused' : action === 'review' ? 'review' : 'active';
+      const txHash = await setOperatorModeOnchain(controllerConfig, {
+        operatorName: env.LEASE_OPERATOR_NAME,
+        mode,
+        note,
+        updatedAt: new Date().toISOString(),
+        lastCommand: action === 'resume' ? 'resume' : action,
+      });
+      return `controller_tx=${txHash}`;
+    }
+    case 'refresh-proof':
+      return 'refreshed=controller-state';
+    case 'run-round':
+      throw new Error('Hosted run-round is not enabled yet. Use a writable runner for live or simulated round execution.');
+    default:
+      throw new Error('Unsupported hosted action.');
+  }
 }
 
 async function buildSummary() {
@@ -80,38 +176,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'Missing action.' }, { status: 400 });
     }
 
-    if (isHostedReadonlyRuntime()) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: 'This hosted deployment is read-only. Run control actions from a writable runner or finish the X Layer controller + external artifact backend first.',
-        },
-        { status: 409 }
-      );
-    }
-
     let output = '';
 
-    switch (action) {
-      case 'issue-lease':
-        output = runCommand(note ? ['npm', 'run', 'lease:issue', '--', note] : ['npm', 'run', 'lease:issue']);
-        break;
-      case 'revoke-lease':
-        output = runCommand(note ? ['npm', 'run', 'lease:revoke', '--', note] : ['npm', 'run', 'lease:revoke']);
-        break;
-      case 'pause':
-      case 'review':
-      case 'resume':
-        output = runCommand(note ? ['npm', 'run', `operator:${action}`, '--', note] : ['npm', 'run', `operator:${action}`]);
-        break;
-      case 'run-round':
-        output = runCommand(['npm', 'run', 'round:live']);
-        break;
-      case 'refresh-proof':
-        output = 'refreshed=current-artifacts';
-        break;
-      default:
-        return NextResponse.json({ ok: false, error: 'Unsupported action.' }, { status: 400 });
+    if (isHostedReadonlyRuntime()) {
+      output = await runHostedControlAction(action, note);
+    } else {
+      switch (action) {
+        case 'issue-lease':
+          output = runCommand(note ? ['npm', 'run', 'lease:issue', '--', note] : ['npm', 'run', 'lease:issue']);
+          break;
+        case 'revoke-lease':
+          output = runCommand(note ? ['npm', 'run', 'lease:revoke', '--', note] : ['npm', 'run', 'lease:revoke']);
+          break;
+        case 'pause':
+        case 'review':
+        case 'resume':
+          output = runCommand(note ? ['npm', 'run', `operator:${action}`, '--', note] : ['npm', 'run', `operator:${action}`]);
+          break;
+        case 'run-round':
+          output = runCommand(['npm', 'run', 'round:live']);
+          break;
+        case 'refresh-proof':
+          output = 'refreshed=current-artifacts';
+          break;
+        default:
+          return NextResponse.json({ ok: false, error: 'Unsupported action.' }, { status: 400 });
+      }
     }
 
     const summary = await buildSummary();

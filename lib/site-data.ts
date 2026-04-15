@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ProofPacket, RoundArtifactIndexEntry } from './types';
-import { canWriteController, readControllerConfig, readOnchainActiveLease, readOnchainLatestReceipt, readOnchainOperator } from './trust-lease-controller';
-import { loadLocalEnvFiles } from '../src/config/env';
+import { canWriteController, readControllerConfig, readOnchainActiveLease, readOnchainLatestReceipt, readOnchainOperator, readRecentOnchainReceipts, type OnchainReceiptEvent } from './trust-lease-controller';
+import { loadLocalEnvFiles, parseCsvList, readRuntimeEnv } from '../src/config/env';
 
 export type SiteData = {
   packet: ProofPacket | null;
@@ -109,6 +109,20 @@ function sortRounds(rounds: RoundArtifactIndexEntry[]): RoundArtifactIndexEntry[
   return [...rounds].sort((left, right) => roundTime(right) - roundTime(left));
 }
 
+function dedupeRounds(rounds: RoundArtifactIndexEntry[]): RoundArtifactIndexEntry[] {
+  const seen = new Set<string>();
+  return sortRounds(
+    rounds.filter((round) => {
+      const key = round.requestId || `${round.generatedAt}-${round.txHash ?? 'none'}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    }),
+  );
+}
+
 function resolvePrimaryPacket(rounds: RoundArtifactIndexEntry[]): ProofPacket | null {
   const latestFilePacket = readJsonIfExists<unknown>(getDataPath('live-proof-latest.json'));
   const primaryFromFile = isUsablePacket(latestFilePacket) ? latestFilePacket : null;
@@ -126,6 +140,113 @@ function resolveRequestedPacket(rounds: RoundArtifactIndexEntry[], requestId?: s
 
   const requestedRound = rounds.find((round) => round.requestId === requestId);
   return readRoundPacket(requestedRound?.relativePath);
+}
+
+function buildSyntheticRoundFromReceipt(receipt: OnchainReceiptEvent): RoundArtifactIndexEntry {
+  return {
+    generatedAt: receipt.timestamp ?? new Date().toISOString(),
+    leaseId: receipt.leaseId,
+    requestId: receipt.requestId,
+    outcome: receipt.outcome,
+    txHash: receipt.txHashHex,
+    summary: `onchain receipt | lease=${receipt.leaseId} | outcome=${receipt.outcome} | execution=${receipt.executionStatus} | tx=${receipt.txHashHex ?? 'none'}`,
+    relativePath: '',
+  };
+}
+
+function buildSyntheticPacketFromOnchain(input: {
+  env: ReturnType<typeof readRuntimeEnv>;
+  lease: ProofPacket['lease'] | null;
+  operator: ProofPacket['operator'] | null;
+  receipt: OnchainReceiptEvent | null;
+}): ProofPacket | null {
+  if (!input.lease || !input.operator || !input.receipt) {
+    return null;
+  }
+
+  const txHash = input.receipt.txHashHex;
+  return {
+    generatedAt: input.receipt.timestamp ?? new Date().toISOString(),
+    product: input.env.LEASE_NAME,
+    operator: input.operator,
+    lease: {
+      ...input.lease,
+      allowedAssets: input.lease.allowedAssets.length > 0 ? input.lease.allowedAssets : parseCsvList(input.env.LEASE_ALLOWED_ASSETS),
+      allowedProtocols: input.lease.allowedProtocols.length > 0 ? input.lease.allowedProtocols : parseCsvList(input.env.LEASE_ALLOWED_PROTOCOLS),
+      allowedActions: input.lease.allowedActions.length > 0 ? input.lease.allowedActions : parseCsvList(input.env.LEASE_ALLOWED_ACTIONS) as ProofPacket['lease']['allowedActions'],
+      counterpartyAllowlist: input.lease.counterpartyAllowlist.length > 0 ? input.lease.counterpartyAllowlist : parseCsvList(input.env.LEASE_ALLOWED_COUNTERPARTIES),
+      notes: input.lease.notes.length > 0 ? input.lease.notes : [input.env.LEASE_NOTES],
+    },
+    treasury: {
+      timestamp: input.receipt.timestamp ?? new Date().toISOString(),
+      network: input.env.XLAYER_CHAIN_ID === 196 ? 'xlayer-mainnet' : 'xlayer-custom',
+      chainId: input.env.XLAYER_CHAIN_ID,
+      baseAsset: input.lease.baseAsset,
+      totalUsd: input.lease.dailyBudgetUsd,
+      liquidUsd: Math.max(input.lease.dailyBudgetUsd - input.receipt.spentUsd, 0),
+      capitalAtRiskUsd: input.receipt.spentUsd,
+      balances: [],
+    },
+    request: {
+      requestId: input.receipt.requestId,
+      createdAt: input.receipt.timestamp ?? new Date().toISOString(),
+      sourceProject: input.lease.consumerName,
+      consumerName: input.lease.consumerName,
+      leaseId: input.lease.leaseId,
+      action: 'rebalance',
+      assetPair: `${input.lease.baseAsset}/managed`,
+      fromToken: input.lease.baseAsset,
+      toToken: txHash ? 'executed' : 'blocked',
+      venueHint: 'controller-anchored',
+      counterparty: 'controller-anchored',
+      notionalUsd: input.receipt.spentUsd,
+      reason: 'Recovered from controller-backed receipt anchor when no local artifact was available.',
+    },
+    checks: [
+      {
+        id: 'operator_mode',
+        label: 'Controller-backed proof',
+        ok: true,
+        note: 'Recovered from X Layer controller state and receipt anchors.',
+      },
+    ],
+    usage: {
+      startedAt: input.receipt.timestamp ?? new Date().toISOString(),
+      spent24hUsd: input.receipt.spentUsd,
+      remainingDailyUsd: Math.max(input.lease.dailyBudgetUsd - input.receipt.spentUsd, 0),
+      receiptCount24h: 1,
+    },
+    decision: {
+      outcome: input.receipt.outcome,
+      trustZone: input.receipt.outcome === 'approve' ? 'green' : input.receipt.outcome === 'resize' ? 'yellow' : 'red',
+      finalNotionalUsd: input.receipt.spentUsd,
+      policyHits: ['controller_anchor'],
+      rationale: txHash
+        ? 'Recovered from a controller-anchored execution receipt on X Layer.'
+        : 'Recovered from a controller-anchored blocked or simulated receipt on X Layer.',
+    },
+    execution: {
+      status: input.receipt.executionStatus,
+      network: input.env.XLAYER_CHAIN_ID === 196 ? 'xlayer-mainnet' : 'xlayer-custom',
+      chainId: input.env.XLAYER_CHAIN_ID,
+      txHash,
+      explorerUrl: txHash ? `${input.env.XLAYER_EXPLORER_BASE_URL.replace(/\/+$/, '')}/tx/${txHash}` : undefined,
+      note: txHash
+        ? 'Execution reconstructed from X Layer controller receipt anchor.'
+        : 'Execution state reconstructed from X Layer controller receipt anchor.',
+    },
+    receipt: {
+      generatedAt: input.receipt.timestamp ?? new Date().toISOString(),
+      leaseId: input.lease.leaseId,
+      requestId: input.receipt.requestId,
+      consumerName: input.lease.consumerName,
+      status: input.receipt.executionStatus === 'broadcasted' ? 'broadcasted' : input.receipt.executionStatus === 'failed' ? 'failed' : 'blocked',
+      spentUsd: input.receipt.spentUsd,
+      txHash,
+      explorerUrl: txHash ? `${input.env.XLAYER_EXPLORER_BASE_URL.replace(/\/+$/, '')}/tx/${txHash}` : undefined,
+      note: 'Recovered from controller anchor.',
+    },
+  };
 }
 
 function commandForOperatorMode(mode: string): ProofPacket['operator']['lastCommand'] {
@@ -186,12 +307,19 @@ function clonePacket(packet: ProofPacket | null): ProofPacket | null {
 export async function getSiteData(options: SiteDataOptions = {}): Promise<SiteData> {
   const rounds = sortRounds(readJsonIfExists<RoundArtifactIndexEntry[]>(getDataPath('index.json')) ?? []);
   const hostedRuntime = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
-  const controllerConfig = readControllerConfig(hostedRuntime ? process.env : loadLocalEnvFiles(process.cwd(), process.env));
+  const loadedEnv = hostedRuntime ? process.env : loadLocalEnvFiles(process.cwd(), process.env);
+  const runtimeEnv = readRuntimeEnv(loadedEnv);
+  const controllerConfig = readControllerConfig(loadedEnv);
   const controllerWritable = canWriteController(controllerConfig);
   const onchainLease = controllerConfig.controllerAddress ? await readOnchainActiveLease(controllerConfig) : null;
   const onchainOperator = controllerConfig.controllerAddress ? await readOnchainOperator(controllerConfig) : null;
   const onchainReceipt = controllerConfig.controllerAddress ? await readOnchainLatestReceipt(controllerConfig) : null;
-  const packet = clonePacket(resolveRequestedPacket(rounds, options.requestId) ?? resolvePrimaryPacket(rounds));
+  const onchainReceipts = controllerConfig.controllerAddress
+    ? await readRecentOnchainReceipts(controllerConfig, { limit: 12 })
+    : [];
+  const mergedRounds = dedupeRounds([...rounds, ...onchainReceipts.map(buildSyntheticRoundFromReceipt)]);
+  const requestedPacket = clonePacket(resolveRequestedPacket(mergedRounds, options.requestId));
+  let packet = requestedPacket ?? clonePacket(resolvePrimaryPacket(mergedRounds));
   const activeLease = readJsonIfExists<ProofPacket['lease']>(getDataPath('leases', 'active-lease.json'));
   const localOperator = readJsonIfExists<ProofPacket['operator']>(getDataPath('operator-state.json')) ?? packet?.operator ?? null;
   let currentOperator = localOperator;
@@ -242,8 +370,8 @@ export async function getSiteData(options: SiteDataOptions = {}): Promise<SiteDa
     packet.receipt.spentUsd = onchainReceipt.spentUsd;
   }
 
-  let latestSuccessRound = rounds.find((round) => Boolean(round.txHash)) ?? null;
-  let latestBlockedRound = rounds.find((round) => round.outcome === 'block') ?? null;
+  let latestSuccessRound = mergedRounds.find((round) => Boolean(round.txHash)) ?? null;
+  let latestBlockedRound = mergedRounds.find((round) => round.outcome === 'block') ?? null;
   if (onchainReceipt) {
     const syntheticRound = buildSyntheticRound(onchainReceipt);
     if (!latestSuccessRound && syntheticRound.txHash) {
@@ -253,14 +381,46 @@ export async function getSiteData(options: SiteDataOptions = {}): Promise<SiteDa
       latestBlockedRound = syntheticRound;
     }
   }
-  const latestSuccessPacket = readRoundPacket(latestSuccessRound?.relativePath);
-  const latestBlockedPacket = readRoundPacket(latestBlockedRound?.relativePath);
+  const latestSuccessPacket =
+    readRoundPacket(latestSuccessRound?.relativePath) ??
+    buildSyntheticPacketFromOnchain({
+      env: runtimeEnv,
+      lease,
+      operator: currentOperator,
+      receipt: onchainReceipts.find((item) => item.requestId === latestSuccessRound?.requestId) ?? null,
+    });
+  const latestBlockedPacket =
+    readRoundPacket(latestBlockedRound?.relativePath) ??
+    buildSyntheticPacketFromOnchain({
+      env: runtimeEnv,
+      lease,
+      operator: currentOperator,
+      receipt: onchainReceipts.find((item) => item.requestId === latestBlockedRound?.requestId) ?? null,
+    });
+
+  if (!requestedPacket && options.requestId) {
+    packet = buildSyntheticPacketFromOnchain({
+      env: runtimeEnv,
+      lease,
+      operator: currentOperator,
+      receipt: onchainReceipts.find((item) => item.requestId === options.requestId) ?? null,
+    }) ?? packet;
+  }
+
+  if (!packet) {
+    packet = buildSyntheticPacketFromOnchain({
+      env: runtimeEnv,
+      lease,
+      operator: currentOperator,
+      receipt: onchainReceipts[0] ?? null,
+    });
+  }
 
   return {
     packet,
     lease,
     currentOperator,
-    rounds,
+    rounds: mergedRounds,
     latestSuccessRound,
     latestBlockedRound,
     latestSuccessPacket,
@@ -272,12 +432,12 @@ export async function getSiteData(options: SiteDataOptions = {}): Promise<SiteDa
       latestTxHash: onchainReceipt?.txHash && onchainReceipt.txHash !== '0x0000000000000000000000000000000000000000000000000000000000000000'
         ? onchainReceipt.txHash
         : null,
-      actionsEnabled: !hostedRuntime,
+      actionsEnabled: hostedRuntime ? controllerWritable : true,
       runRoundEnabled: !hostedRuntime,
       note: hostedRuntime
         ? controllerWritable
-          ? 'Hosted deployment is still proof-first. Use a writable runner until artifact persistence is moved off the local filesystem.'
-          : 'Hosted deployment is read-only. Control actions require a writable runner or a fully externalized controller backend.'
+          ? 'Hosted deployment can issue, revoke, and change operator posture directly on X Layer. Live round execution still requires a writable runner.'
+          : 'Hosted deployment is read-only. Control actions require a configured X Layer controller writer or a writable runner.'
         : null,
     },
   };

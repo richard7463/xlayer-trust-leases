@@ -33,12 +33,17 @@ Add to `.env.local`:
 LEASE_CHAIN_SYNC_ENABLED=true
 LEASE_CONTROLLER_ADDRESS=0x...
 LEASE_CONTROLLER_WRITER_PRIVATE_KEY=0x...
+LEASE_CONTROLLER_DEPLOY_BLOCK=57453029
 LEASE_CONTROLLER_ARTIFACT_BASE_URI=https://your-proof-host.example/trust-leases
 ```
 
 Fallback behavior:
 - if `LEASE_CHAIN_SYNC_ENABLED=false`, the project stays in local artifact mode
 - if `LEASE_CONTROLLER_ADDRESS` is missing, the dashboard falls back to local runtime state only
+
+Hosted behavior:
+- Vercel can issue leases and change operator posture directly through `app/api/control/route.ts` when `LEASE_CONTROLLER_WRITER_PRIVATE_KEY` is configured
+- hosted `run-round` is still intentionally disabled, because live execution and artifact writes still require a writable runner
 
 ## What syncs onchain
 
@@ -79,6 +84,7 @@ Offchain:
 - full checks array
 - rendered proof dashboard HTML
 - submission page HTML
+- live round execution orchestration
 
 This split is intentional. The chain stores the primitive and immutable anchors. The app and artifact layer keep the high-density proof surface.
 

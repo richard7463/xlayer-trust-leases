@@ -56,6 +56,7 @@ It now runs as a hybrid product:
 - a live execution bridge into `xlayer-strategy-office`
 - an X Layer controller contract for lease state, operator posture, and receipt anchors
 - a proof surface that shows both approved and blocked paths
+- a hosted control path that can issue leases and change operator posture directly on X Layer
 
 ![Submission Surface](docs/assets/submission-hero.png)
 
@@ -75,6 +76,7 @@ It now runs as a hybrid product:
 | Runtime bridge | [`scripts/live-round.ts`](scripts/live-round.ts) |
 | Lease issuance bridge | [`scripts/issue-lease.ts`](scripts/issue-lease.ts) |
 | Operator posture bridge | [`scripts/operator-command.ts`](scripts/operator-command.ts) |
+| Hosted control route | [`app/api/control/route.ts`](app/api/control/route.ts) |
 | Governed wallet | `0xdbc8e35ea466f85d57c0cc1517a81199b8549f04` |
 | Latest successful tx | [`0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece`](https://www.oklink.com/xlayer/tx/0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece) |
 | Latest receipt anchor tx | [`0x6e5b357ca20ccd6deea39437a3b959b5af299b4115cbb8ae772739b3c4df39b7`](https://www.oklink.com/xlayer/tx/0x6e5b357ca20ccd6deea39437a3b959b5af299b4115cbb8ae772739b3c4df39b7) |
@@ -91,6 +93,7 @@ It now runs as a hybrid product:
 > - **Execution path:** the live `xlayer-strategy-office` round path now reads the trust lease before it can broadcast
 > - **Onchain controller:** lease state, operator posture, and receipt anchors can now be mirrored into a dedicated X Layer contract
 > - **Human posture:** issue, pause, review, resume, and revoke without giving full wallet access
+> - **Hosted product boundary:** the public app can write lease and operator state directly to X Layer; live round execution still runs from a writable runner
 
 ### Current proof snapshot
 
@@ -130,7 +133,7 @@ It now runs as a hybrid product:
 | OnchainOS / Uniswap integration and innovation | Reuses the live OnchainOS-backed X Layer execution path from `xlayer-strategy-office`, then inserts a lease gate before broadcast. |
 | X Layer ecosystem integration | Dedicated X Layer controller contract, X Layer wallet scope, X Layer tx proof, and X Layer receipt anchoring. |
 | AI interactive experience | Human issues bounded authority, agent requests execution, system evaluates policy, then surfaces approve / resize / block / review in the web app. |
-| Product completeness | Web dashboard, proof page, operator console, runtime scripts, local artifacts, contract subproject, deploy script, and runbooks are all in this repo. |
+| Product completeness | Web dashboard, proof page, operator console, hosted controller writes, runtime scripts, local artifacts, contract subproject, deploy script, and runbooks are all in this repo. |
 
 ## Why This Project Exists
 
@@ -224,7 +227,7 @@ sequenceDiagram
 |---|---|
 | Agent gets broad wallet access | Agent gets a bounded lease |
 | Review happens after execution | Governance happens before broadcast |
-| Dashboard is read-only | Web app can issue, pause, review, resume, revoke, and run |
+| Dashboard is read-only | Web app can issue, pause, review, resume, and revoke onchain; live rounds remain runner-backed |
 | Proof is mostly screenshots or logs | Proof packets, receipts, tx hashes, and contract anchors coexist |
 | Chain only sees the final swap | Chain can also see lease state, operator posture, and receipt anchor |
 
