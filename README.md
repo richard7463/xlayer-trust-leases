@@ -7,11 +7,13 @@
 ![Mode](https://img.shields.io/badge/Mode-Web%20App%20%2B%20X%20Layer%20Controller-4f46e5)
 ![Control](https://img.shields.io/badge/Control-Issue%20%7C%20Pause%20%7C%20Review%20%7C%20Resume%20%7C%20Revoke-065f46)
 
-Pre-execution control plane for agent spending on X Layer.
+A safer way to let an AI agent trade on X Layer without giving it your whole wallet.
 
-X Layer Trust Leases turns agent authority into an explicit product primitive.
+X Layer Trust Leases is a product for one simple problem:
 
-Instead of giving an agent a full wallet or forcing a human to manually approve every action forever, Trust Leases lets a human issue a short-lived execution lease with hard boundaries:
+How do you let an agent execute real onchain actions, but only within limits you choose?
+
+Instead of giving an agent full wallet access, Trust Leases lets a human issue a temporary permission slip with hard boundaries:
 
 - which wallet the agent can use
 - which assets and protocols it can touch
@@ -20,17 +22,30 @@ Instead of giving an agent a full wallet or forcing a human to manually approve 
 - when that authority expires
 - what proof must come back after execution
 
-This is not another agent dashboard.
-It is a contract-backed execution lease desk for live X Layer agents.
+So the agent can act, but only inside the envelope you set.
+
+In plain terms:
+
+- you choose the wallet
+- you choose what the agent is allowed to trade
+- you choose how much it can spend
+- you choose when the permission ends
+- the app records what happened and returns proof
+
+This is not another tracking dashboard.
+It is a control layer for real agent execution on X Layer.
 
 ## 30-Second Pitch
 
-X Layer Trust Leases is a contract-backed governance layer for autonomous execution on X Layer.
+X Layer Trust Leases lets a human give an agent limited, temporary permission to execute on X Layer.
 
-A human issues a lease.
-An agent submits a request against that lease.
-Trust Leases checks wallet scope, asset allowlist, protocol allowlist, counterparty allowlist, budget caps, expiry, and route quality before anything broadcasts.
-Only requests that remain inside the authority envelope can execute on X Layer.
+The flow is simple:
+
+1. a human issues a lease
+2. the agent submits a request
+3. Trust Leases checks the request against the wallet, assets, protocols, budget, counterparties, and expiry
+4. only valid requests are allowed to execute
+5. the system writes back proof and receipt data
 
 This project is the missing middle between:
 - giving an agent a full wallet
