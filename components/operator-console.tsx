@@ -3,6 +3,16 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
+type EthereumProvider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
+
+declare global {
+  interface Window {
+    ethereum?: EthereumProvider;
+  }
+}
+
 type OperatorConsoleProps = {
   leaseId?: string | null;
   leaseStatus?: string | null;
@@ -63,6 +73,7 @@ export function OperatorConsole({
   const router = useRouter();
   const [note, setNote] = useState('');
   const [walletAddress, setWalletAddress] = useState(governedWallet ?? '');
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<ControlAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +116,47 @@ export function OperatorConsole({
     }
   }
 
+  async function connectWallet() {
+    setMessage(null);
+    setError(null);
+
+    try {
+      if (!window.ethereum) {
+        throw new Error('No browser wallet found. Install OKX Wallet, MetaMask, or another EVM wallet first.');
+      }
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
+      const account = accounts[0];
+      if (!account) {
+        throw new Error('Wallet did not return an account.');
+      }
+
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xc4' }],
+        });
+      } catch {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0xc4',
+            chainName: 'X Layer',
+            nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
+            rpcUrls: ['https://xlayer.drpc.org'],
+            blockExplorerUrls: ['https://www.oklink.com/xlayer'],
+          }],
+        });
+      }
+
+      setConnectedWallet(account);
+      setWalletAddress(account);
+      setMessage('Wallet connected. This address is now the governed wallet for the next lease.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Wallet connection failed.');
+    }
+  }
+
   return (
     <div className="card">
       <h2>Operator Console</h2>
@@ -118,6 +170,18 @@ export function OperatorConsole({
         {meta.map((item) => (
           <span key={item} className="pill ok">{item}</span>
         ))}
+      </div>
+
+      <div className="connect-panel">
+        <div>
+          <div className="connect-title">Start here: connect the wallet you want to protect</div>
+          <div className="connect-copy">
+            This only reads your wallet address and switches to X Layer. The lease still limits what an agent can do.
+          </div>
+        </div>
+        <button type="button" className="action-button primary" onClick={connectWallet} disabled={busyAction !== null}>
+          {connectedWallet ? 'Wallet Connected' : 'Connect Wallet'}
+        </button>
       </div>
 
       <div className="note-row">

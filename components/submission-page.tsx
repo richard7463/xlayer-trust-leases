@@ -114,7 +114,7 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
         <div className="info-grid">
           <div className="info-card">
             <div className="k">Step 1</div>
-            <div className="v">Choose the wallet the agent may operate</div>
+            <div className="v">Connect or paste the wallet the agent may operate</div>
           </div>
           <div className="info-card">
             <div className="k">Step 2</div>
@@ -130,6 +130,20 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
           </div>
         </div>
       </div>
+
+      <OperatorConsole
+        leaseId={liveLease?.leaseId}
+        leaseStatus={liveLease?.status}
+        operatorMode={currentOperator?.mode ?? packet?.operator.mode}
+        latestSuccessTxHash={latestSuccessRound?.txHash}
+        latestBlockedReason={latestBlockedPacket?.decision.rationale}
+        controllerAddress={controller.address}
+        controllerSource={controller.source}
+        governedWallet={liveLease?.walletAddress}
+        actionsEnabled={controller.actionsEnabled}
+        runRoundEnabled={controller.runRoundEnabled}
+        controllerNote={controller.note}
+      />
 
       <div className="stats-bar">
         <div className="stat-card">
@@ -224,20 +238,6 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
           </div>
         </div>
       </div>
-
-      <OperatorConsole
-        leaseId={liveLease?.leaseId}
-        leaseStatus={liveLease?.status}
-        operatorMode={currentOperator?.mode ?? packet?.operator.mode}
-        latestSuccessTxHash={latestSuccessRound?.txHash}
-        latestBlockedReason={latestBlockedPacket?.decision.rationale}
-        controllerAddress={controller.address}
-        controllerSource={controller.source}
-        governedWallet={liveLease?.walletAddress}
-        actionsEnabled={controller.actionsEnabled}
-        runRoundEnabled={controller.runRoundEnabled}
-        controllerNote={controller.note}
-      />
 
       <div className="grid-2">
         <div className="card">
