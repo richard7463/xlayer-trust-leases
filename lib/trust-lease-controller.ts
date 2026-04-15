@@ -321,7 +321,15 @@ async function writeController(config: ControllerConfig, functionName: 'issueLea
     args: args as never,
   } as never);
   const hash = await wallet.writeContract(request);
-  await pub.waitForTransactionReceipt({ hash });
+  try {
+    await pub.waitForTransactionReceipt({ hash });
+  } catch (error) {
+    console.warn(
+      '[trust-leases] controller tx broadcasted but receipt polling failed',
+      hash,
+      error instanceof Error ? error.message : error,
+    );
+  }
   return hash;
 }
 
