@@ -4,6 +4,13 @@
 
 Deploy the `TrustLeaseController` contract to X Layer and enable contract-driven lease, operator, and receipt state.
 
+## Current mainnet deployment
+
+- Controller: `0xc2220b67264cd7582bbccb8a62ef4e34228fa0ca`
+- Controller owner: `0x3f665386b41Fa15c5ccCeE983050a236E6a10108`
+- Lease issue mirror timestamp: `2026-04-15T03:04:47Z`
+- Latest receipt anchor tx: `0x6e5b357ca20ccd6deea39437a3b959b5af299b4115cbb8ae772739b3c4df39b7`
+
 ## Contract project
 
 The Solidity project lives under:

@@ -21,12 +21,17 @@ async function main(): Promise<void> {
   const siteOutputs = writeSubmissionSite({ packet, index, baseDir: path.resolve(env.LEASE_DATA_DIR) });
   const controllerConfig = controllerConfigFromRuntimeEnv(env);
   let controllerTx: string | undefined;
+  const artifactUri =
+    buildArtifactUri(controllerConfig, path.relative(path.resolve(env.LEASE_DATA_DIR), artifacts.roundPath)) ||
+    (env.LEASE_PUBLIC_PROOF_URL
+      ? `${env.LEASE_PUBLIC_PROOF_URL.replace(/\/$/, "")}?requestId=${encodeURIComponent(packet.request.requestId)}`
+      : "");
 
   if (canWriteController(controllerConfig)) {
     controllerTx = await anchorReceiptOnchain(
       controllerConfig,
       packet,
-      buildArtifactUri(controllerConfig, path.relative(path.resolve(env.LEASE_DATA_DIR), artifacts.roundPath))
+      artifactUri
     );
   }
 

@@ -38,12 +38,15 @@ This project is the missing middle between:
 | Core primitive | Short-lived execution lease for X Layer agents |
 | Web surface | `submission` and `proof` routes with in-app Operator Console |
 | X Layer contract | [`contracts/contracts/TrustLeaseController.sol`](contracts/contracts/TrustLeaseController.sol) |
+| Deployed controller | [`0xc2220b67264cd7582bbccb8a62ef4e34228fa0ca`](https://www.oklink.com/xlayer/address/0xc2220b67264cd7582bbccb8a62ef4e34228fa0ca) |
+| Controller owner | `0x3f665386b41Fa15c5ccCeE983050a236E6a10108` |
 | Deploy script | [`contracts/scripts/deploy.ts`](contracts/scripts/deploy.ts) |
 | Runtime bridge | [`scripts/live-round.ts`](scripts/live-round.ts) |
 | Lease issuance bridge | [`scripts/issue-lease.ts`](scripts/issue-lease.ts) |
 | Operator posture bridge | [`scripts/operator-command.ts`](scripts/operator-command.ts) |
 | Governed wallet | `0xdbc8e35ea466f85d57c0cc1517a81199b8549f04` |
 | Latest successful tx | [`0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece`](https://www.oklink.com/xlayer/tx/0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece) |
+| Latest receipt anchor tx | [`0x6e5b357ca20ccd6deea39437a3b959b5af299b4115cbb8ae772739b3c4df39b7`](https://www.oklink.com/xlayer/tx/0x6e5b357ca20ccd6deea39437a3b959b5af299b4115cbb8ae772739b3c4df39b7) |
 | Latest proof packet | [`data/trust-leases/live-proof-latest.json`](data/trust-leases/live-proof-latest.json) |
 | Contract runbook | [docs/CONTRACT_RUNBOOK.md](docs/CONTRACT_RUNBOOK.md) |
 
@@ -70,6 +73,8 @@ This project is the missing middle between:
 | Latest execution | `simulated` |
 | Latest rationale | `No material allocation drift produced a leaseable strategy-office request in this round.` |
 | Latest successful tx | [`0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece`](https://www.oklink.com/xlayer/tx/0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece) |
+| Live controller | [`0xc2220b67264cd7582bbccb8a62ef4e34228fa0ca`](https://www.oklink.com/xlayer/address/0xc2220b67264cd7582bbccb8a62ef4e34228fa0ca) |
+| Latest receipt anchor | [`0x6e5b357ca20ccd6deea39437a3b959b5af299b4115cbb8ae772739b3c4df39b7`](https://www.oklink.com/xlayer/tx/0x6e5b357ca20ccd6deea39437a3b959b5af299b4115cbb8ae772739b3c4df39b7) |
 | Live runtime proof | [`data/trust-leases/live-proof-latest.json`](data/trust-leases/live-proof-latest.json) |
 | Live strategy-office proof | [`../xlayer-strategy-office/data/office/live-proof-latest.json`](../xlayer-strategy-office/data/office/live-proof-latest.json) |
 

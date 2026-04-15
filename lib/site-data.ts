@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ProofPacket, RoundArtifactIndexEntry } from './types';
 import { canWriteController, readControllerConfig, readOnchainActiveLease, readOnchainLatestReceipt, readOnchainOperator } from './trust-lease-controller';
+import { loadLocalEnvFiles } from '../src/config/env';
 
 export type SiteData = {
   packet: ProofPacket | null;
@@ -21,6 +22,10 @@ export type SiteData = {
     runRoundEnabled: boolean;
     note: string | null;
   };
+};
+
+type SiteDataOptions = {
+  requestId?: string | null;
 };
 
 function getDataPath(...segments: string[]): string {
@@ -114,6 +119,15 @@ function resolvePrimaryPacket(rounds: RoundArtifactIndexEntry[]): ProofPacket | 
   return packetTime(primaryFromIndex) > packetTime(primaryFromFile) ? primaryFromIndex : primaryFromFile;
 }
 
+function resolveRequestedPacket(rounds: RoundArtifactIndexEntry[], requestId?: string | null): ProofPacket | null {
+  if (!requestId) {
+    return null;
+  }
+
+  const requestedRound = rounds.find((round) => round.requestId === requestId);
+  return readRoundPacket(requestedRound?.relativePath);
+}
+
 function commandForOperatorMode(mode: string): ProofPacket['operator']['lastCommand'] {
   switch (mode) {
     case 'active':
@@ -169,15 +183,15 @@ function clonePacket(packet: ProofPacket | null): ProofPacket | null {
   return packet ? JSON.parse(JSON.stringify(packet)) as ProofPacket : null;
 }
 
-export async function getSiteData(): Promise<SiteData> {
+export async function getSiteData(options: SiteDataOptions = {}): Promise<SiteData> {
   const rounds = sortRounds(readJsonIfExists<RoundArtifactIndexEntry[]>(getDataPath('index.json')) ?? []);
-  const controllerConfig = readControllerConfig();
   const hostedRuntime = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+  const controllerConfig = readControllerConfig(hostedRuntime ? process.env : loadLocalEnvFiles(process.cwd(), process.env));
   const controllerWritable = canWriteController(controllerConfig);
   const onchainLease = controllerConfig.controllerAddress ? await readOnchainActiveLease(controllerConfig) : null;
   const onchainOperator = controllerConfig.controllerAddress ? await readOnchainOperator(controllerConfig) : null;
   const onchainReceipt = controllerConfig.controllerAddress ? await readOnchainLatestReceipt(controllerConfig) : null;
-  const packet = clonePacket(resolvePrimaryPacket(rounds));
+  const packet = clonePacket(resolveRequestedPacket(rounds, options.requestId) ?? resolvePrimaryPacket(rounds));
   const activeLease = readJsonIfExists<ProofPacket['lease']>(getDataPath('leases', 'active-lease.json'));
   const localOperator = readJsonIfExists<ProofPacket['operator']>(getDataPath('operator-state.json')) ?? packet?.operator ?? null;
   let currentOperator = localOperator;
