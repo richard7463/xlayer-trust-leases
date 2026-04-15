@@ -7,24 +7,40 @@
 ![Mode](https://img.shields.io/badge/Mode-Web%20App%20%2B%20X%20Layer%20Controller-4f46e5)
 ![Control](https://img.shields.io/badge/Control-Issue%20%7C%20Pause%20%7C%20Review%20%7C%20Resume%20%7C%20Revoke-065f46)
 
-Temporary, bounded, revocable execution authority for live X Layer agents.
+Pre-execution control plane for agent spending on X Layer.
 
-> If agents are going to spend, execute, and trade autonomously, humans need more than a dashboard.
->
-> They need a lease: a short-lived authority envelope that defines which wallet the agent can use, what it can trade, how much it can spend, which counterparties it can touch, when the authority expires, and what proof must come back.
+X Layer Trust Leases turns agent authority into an explicit product primitive.
+
+Instead of giving an agent a full wallet or forcing a human to manually approve every action forever, Trust Leases lets a human issue a short-lived execution lease with hard boundaries:
+
+- which wallet the agent can use
+- which assets and protocols it can touch
+- which counterparties it can trade against
+- how much it can spend per action and per day
+- when that authority expires
+- what proof must come back after execution
+
+This is not another agent dashboard.
+It is a contract-backed execution lease desk for live X Layer agents.
 
 ## 30-Second Pitch
 
-X Layer Trust Leases is a pre-execution governance layer for X Layer agents.
+X Layer Trust Leases is a contract-backed governance layer for autonomous execution on X Layer.
 
 A human issues a lease.
-The agent submits a request against that lease.
-The lease checks wallet scope, asset allowlist, protocol allowlist, counterparty allowlist, per-tx budget, daily budget, expiry, and route quality.
-Only then does live X Layer execution proceed.
+An agent submits a request against that lease.
+Trust Leases checks wallet scope, asset allowlist, protocol allowlist, counterparty allowlist, budget caps, expiry, and route quality before anything broadcasts.
+Only requests that remain inside the authority envelope can execute on X Layer.
 
 This project is the missing middle between:
 - giving an agent a full wallet
 - manually approving every action
+
+It now runs as a hybrid product:
+- a real web app for operators
+- a live execution bridge into `xlayer-strategy-office`
+- an X Layer controller contract for lease state, operator posture, and receipt anchors
+- a proof surface that shows both approved and blocked paths
 
 ![Submission Surface](docs/assets/submission-hero.png)
 
