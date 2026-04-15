@@ -18,14 +18,32 @@ type OperatorConsoleProps = {
 
 type ControlAction = 'issue-lease' | 'revoke-lease' | 'pause' | 'review' | 'resume' | 'run-round' | 'refresh-proof';
 
-const ACTIONS: Array<{ action: ControlAction; label: string; tone?: 'primary' | 'warn' | 'neutral' }> = [
-  { action: 'issue-lease', label: 'Issue Lease', tone: 'primary' },
-  { action: 'pause', label: 'Pause', tone: 'warn' },
-  { action: 'review', label: 'Review', tone: 'warn' },
-  { action: 'resume', label: 'Resume', tone: 'primary' },
-  { action: 'revoke-lease', label: 'Revoke', tone: 'warn' },
-  { action: 'run-round', label: 'Run Round', tone: 'primary' },
-  { action: 'refresh-proof', label: 'Refresh Proof', tone: 'neutral' },
+const ACTION_GROUPS: Array<{
+  label: string;
+  actions: Array<{ action: ControlAction; label: string; tone?: 'primary' | 'warn' | 'neutral' }>;
+}> = [
+  {
+    label: 'Lease',
+    actions: [
+      { action: 'issue-lease', label: 'Issue Lease', tone: 'primary' },
+      { action: 'revoke-lease', label: 'Revoke', tone: 'warn' },
+    ],
+  },
+  {
+    label: 'Operator',
+    actions: [
+      { action: 'pause', label: 'Pause', tone: 'warn' },
+      { action: 'review', label: 'Review', tone: 'warn' },
+      { action: 'resume', label: 'Resume', tone: 'primary' },
+    ],
+  },
+  {
+    label: 'Runtime',
+    actions: [
+      { action: 'run-round', label: 'Run Round', tone: 'primary' },
+      { action: 'refresh-proof', label: 'Refresh Proof', tone: 'neutral' },
+    ],
+  },
 ];
 
 export function OperatorConsole({
@@ -110,21 +128,28 @@ export function OperatorConsole({
         />
       </div>
 
-      <div className="action-row">
-        {ACTIONS.map((item) => (
-          <button
-            key={item.action}
-            type="button"
-            className={`action-button ${item.tone ?? 'neutral'}`}
-            disabled={
-              busyAction !== null ||
-              !actionsEnabled ||
-              (item.action === 'run-round' && !runRoundEnabled)
-            }
-            onClick={() => runAction(item.action)}
-          >
-            {busyAction === item.action ? 'Working...' : item.label}
-          </button>
+      <div className="action-groups">
+        {ACTION_GROUPS.map((group) => (
+          <div key={group.label} className="action-group">
+            <div className="action-group-label">{group.label}</div>
+            <div className="action-row">
+              {group.actions.map((item) => (
+                <button
+                  key={item.action}
+                  type="button"
+                  className={`action-button ${item.tone ?? 'neutral'}`}
+                  disabled={
+                    busyAction !== null ||
+                    !actionsEnabled ||
+                    (item.action === 'run-round' && !runRoundEnabled)
+                  }
+                  onClick={() => runAction(item.action)}
+                >
+                  {busyAction === item.action ? 'Working...' : item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 

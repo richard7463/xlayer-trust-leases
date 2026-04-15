@@ -795,6 +795,7 @@ td {
   .steps-container { flex-direction: column; }
   .grid-2 { grid-template-columns: 1fr; }
   .demo-buttons { grid-template-columns: 1fr; }
+  .action-groups { grid-template-columns: 1fr; }
   .hero h1 { font-size: 36px; }
   .hero { padding: 32px 24px; }
 }
@@ -833,9 +834,27 @@ td {
   border-color: var(--lime);
 }
 .action-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
   gap: 10px;
+}
+.action-groups {
+  display: grid;
+  grid-template-columns: 1.05fr 1.3fr 1.05fr;
+  gap: 12px;
+}
+.action-group {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.015);
+  border-radius: 10px;
+  padding: 12px;
+}
+.action-group-label {
+  font-size: 10px;
+  color: var(--s2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
 }
 .action-button {
   border: 1px solid var(--border2);
@@ -862,7 +881,7 @@ td {
 }
 .action-button:disabled {
   opacity: 0.55;
-  cursor: wait;
+  cursor: not-allowed;
 }
 .response-banner {
   margin-top: 14px;
