@@ -6,6 +6,10 @@ export const dynamic = 'force-dynamic';
 
 type ControlAction = 'issue-lease' | 'revoke-lease' | 'pause' | 'review' | 'resume' | 'run-round' | 'refresh-proof';
 
+function isHostedReadonlyRuntime(): boolean {
+  return Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+}
+
 function runCommand(args: string[]): string {
   return execFileSync(args[0], args.slice(1), {
     cwd: process.cwd(),
@@ -76,6 +80,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'Missing action.' }, { status: 400 });
     }
 
+    if (isHostedReadonlyRuntime()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'This hosted deployment is read-only. Run control actions from a writable runner or finish the X Layer controller + external artifact backend first.',
+        },
+        { status: 409 }
+      );
+    }
+
     let output = '';
 
     switch (action) {
@@ -94,7 +108,7 @@ export async function POST(request: Request) {
         output = runCommand(['npm', 'run', 'round:live']);
         break;
       case 'refresh-proof':
-        output = runCommand(['npm', 'run', 'proof:render']);
+        output = 'refreshed=current-artifacts';
         break;
       default:
         return NextResponse.json({ ok: false, error: 'Unsupported action.' }, { status: 400 });

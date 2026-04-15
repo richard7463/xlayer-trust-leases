@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { ProofPacket, RoundArtifactIndexEntry } from './types';
-import { readControllerConfig, readOnchainActiveLease, readOnchainLatestReceipt, readOnchainOperator } from './trust-lease-controller';
+import { canWriteController, readControllerConfig, readOnchainActiveLease, readOnchainLatestReceipt, readOnchainOperator } from './trust-lease-controller';
 
 export type SiteData = {
   packet: ProofPacket | null;
@@ -17,6 +17,9 @@ export type SiteData = {
     source: 'local' | 'onchain';
     latestRequestId: string | null;
     latestTxHash: string | null;
+    actionsEnabled: boolean;
+    runRoundEnabled: boolean;
+    note: string | null;
   };
 };
 
@@ -169,6 +172,8 @@ function clonePacket(packet: ProofPacket | null): ProofPacket | null {
 export async function getSiteData(): Promise<SiteData> {
   const rounds = sortRounds(readJsonIfExists<RoundArtifactIndexEntry[]>(getDataPath('index.json')) ?? []);
   const controllerConfig = readControllerConfig();
+  const hostedRuntime = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+  const controllerWritable = canWriteController(controllerConfig);
   const onchainLease = controllerConfig.controllerAddress ? await readOnchainActiveLease(controllerConfig) : null;
   const onchainOperator = controllerConfig.controllerAddress ? await readOnchainOperator(controllerConfig) : null;
   const onchainReceipt = controllerConfig.controllerAddress ? await readOnchainLatestReceipt(controllerConfig) : null;
@@ -253,11 +258,21 @@ export async function getSiteData(): Promise<SiteData> {
       latestTxHash: onchainReceipt?.txHash && onchainReceipt.txHash !== '0x0000000000000000000000000000000000000000000000000000000000000000'
         ? onchainReceipt.txHash
         : null,
+      actionsEnabled: !hostedRuntime,
+      runRoundEnabled: !hostedRuntime,
+      note: hostedRuntime
+        ? controllerWritable
+          ? 'Hosted deployment is still proof-first. Use a writable runner until artifact persistence is moved off the local filesystem.'
+          : 'Hosted deployment is read-only. Control actions require a writable runner or a fully externalized controller backend.'
+        : null,
     },
   };
 }
 
 export function writeCanonicalLatestIfNeeded(packet: ProofPacket): void {
+  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+    return;
+  }
   const latestPath = getDataPath('live-proof-latest.json');
   fs.writeFileSync(latestPath, `${JSON.stringify(packet, null, 2)}\n`);
 }

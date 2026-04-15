@@ -18,6 +18,9 @@ type ProofPageProps = {
     source: 'local' | 'onchain';
     latestRequestId: string | null;
     latestTxHash: string | null;
+    actionsEnabled: boolean;
+    runRoundEnabled: boolean;
+    note: string | null;
   };
 };
 
@@ -102,6 +105,9 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
         latestBlockedReason={latestBlockedPacket?.decision.rationale}
         controllerAddress={controller.address}
         controllerSource={controller.source}
+        actionsEnabled={controller.actionsEnabled}
+        runRoundEnabled={controller.runRoundEnabled}
+        controllerNote={controller.note}
       />
 
       <div className="grid-2">

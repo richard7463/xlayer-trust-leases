@@ -11,6 +11,9 @@ type OperatorConsoleProps = {
   latestBlockedReason?: string | null;
   controllerAddress?: string | null;
   controllerSource?: 'local' | 'onchain';
+  actionsEnabled?: boolean;
+  runRoundEnabled?: boolean;
+  controllerNote?: string | null;
 };
 
 type ControlAction = 'issue-lease' | 'revoke-lease' | 'pause' | 'review' | 'resume' | 'run-round' | 'refresh-proof';
@@ -33,6 +36,9 @@ export function OperatorConsole({
   latestBlockedReason,
   controllerAddress,
   controllerSource,
+  actionsEnabled = true,
+  runRoundEnabled = true,
+  controllerNote,
 }: OperatorConsoleProps) {
   const router = useRouter();
   const [note, setNote] = useState('');
@@ -82,7 +88,9 @@ export function OperatorConsole({
     <div className="card">
       <h2>Operator Console</h2>
       <p>
-        Issue a new lease, change operator posture, run a governed round, or refresh the visible proof without leaving the app.
+        {actionsEnabled
+          ? 'Issue a new lease, change operator posture, run a governed round, or refresh the visible proof without leaving the app.'
+          : 'This deployment is currently operating as a proof viewer. Use a writable runner for live control actions until the backend is fully externalized.'}
       </p>
 
       <div className="action-meta">
@@ -108,7 +116,11 @@ export function OperatorConsole({
             key={item.action}
             type="button"
             className={`action-button ${item.tone ?? 'neutral'}`}
-            disabled={busyAction !== null}
+            disabled={
+              busyAction !== null ||
+              !actionsEnabled ||
+              (item.action === 'run-round' && !runRoundEnabled)
+            }
             onClick={() => runAction(item.action)}
           >
             {busyAction === item.action ? 'Working...' : item.label}
@@ -116,6 +128,7 @@ export function OperatorConsole({
         ))}
       </div>
 
+      {controllerNote ? <div className="response-banner">{controllerNote}</div> : null}
       {message ? <div className="response-banner success">{message}</div> : null}
       {error ? <div className="response-banner error">{error}</div> : null}
 
