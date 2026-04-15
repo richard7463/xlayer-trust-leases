@@ -247,16 +247,6 @@ export function OperatorConsole({
           />
         </div>
         <div className="note-row">
-          <label htmlFor="base-asset" className="note-label">Base Asset</label>
-          <input
-            id="base-asset"
-            value={baseAssetInput}
-            onChange={(event) => setBaseAssetInput(event.target.value.toUpperCase())}
-            placeholder="USDT0"
-            className="note-input"
-          />
-        </div>
-        <div className="note-row">
           <label htmlFor="per-tx-usd" className="note-label">Per-Tx Limit (USD)</label>
           <input
             id="per-tx-usd"
@@ -276,6 +266,21 @@ export function OperatorConsole({
             className="note-input"
           />
         </div>
+      </div>
+
+      <details className="settings-advanced">
+        <summary>Advanced Rule Settings</summary>
+        <div className="lease-config-grid">
+          <div className="note-row">
+            <label htmlFor="base-asset" className="note-label">Base Asset</label>
+            <input
+              id="base-asset"
+              value={baseAssetInput}
+              onChange={(event) => setBaseAssetInput(event.target.value.toUpperCase())}
+              placeholder="USDT0"
+              className="note-input"
+            />
+          </div>
         <div className="note-row">
           <label htmlFor="allowed-assets" className="note-label">Allowed Assets (CSV)</label>
           <input
@@ -306,7 +311,8 @@ export function OperatorConsole({
             className="note-input"
           />
         </div>
-      </div>
+        </div>
+      </details>
 
       <div className="note-row">
         <label htmlFor="operator-note" className="note-label">Action Note</label>
