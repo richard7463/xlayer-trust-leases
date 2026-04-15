@@ -97,19 +97,8 @@ export function SubmissionPage({
 
   return (
     <div className="app">
-      <div className="topbar">
-        <div className="topbar-left">
-          <span className="topbar-label">Network</span>
-          <span className="topbar-value">X Layer {packet?.treasury.chainId ?? 196}</span>
-        </div>
-        <div className="topbar-left">
-          <span className="topbar-label">Product</span>
-          <span className="topbar-value">Boundless</span>
-        </div>
-      </div>
-
       <header className="header">
-        <div className="logo">
+        <div className="brand">
           <div className="logo-icon">B</div>
           <div>
             <div className="logo-text">Boundless</div>
@@ -128,121 +117,78 @@ export function SubmissionPage({
 
       <div className="dashboard-shell">
         <aside className="dashboard-sidebar">
-          <div className="card">
-            <h2>How This Works</h2>
-            <p>
-              Boundless — Let agents run, within your rules, budget, and verifiable proof.
-            </p>
-            <p>
-              Connect a wallet on the top-right, set a spending rule, then issue it onchain. The agent can only act inside that rule.
-            </p>
-            <ol className="guide-list">
-              <li>Choose the wallet to protect.</li>
-              <li>Set rule limits: per-action max, daily budget, assets, and protocols.</li>
-              <li>Configure each member wallet budget onchain.</li>
-              <li>Issue rule to X Layer contract.</li>
-              <li>Watch every request become approve, resize, or block with proof.</li>
-            </ol>
-            <div className="scope-grid">
-              <div>
-                <div className="scope-title">Can Do Now</div>
-                <ul className="scope-list">
-                  <li>Issue/revoke rule onchain.</li>
-                  <li>Pause/review/resume operator mode.</li>
-                  <li>Set per-member budget policy.</li>
-                  <li>Anchor receipts and tx proof.</li>
-                </ul>
+          <div className="card sidebar-card">
+            <div className="card-header">
+              <h2>Current Rule</h2>
+              <span className={`status-badge ${leaseState.tone}`}>{leaseState.label}</span>
+            </div>
+            <div className="sidebar-meta">
+              <div className="meta-item">
+                <span className="meta-label">Wallet</span>
+                <span className="meta-value mono">{shortHash(liveLease?.walletAddress)}</span>
               </div>
-              <div>
-                <div className="scope-title">Not Automatic Yet</div>
-                <ul className="scope-list">
-                  <li>Does not block manual wallet transfers outside this flow.</li>
-                  <li>Hard lock requires vault mode where funds stay in contract.</li>
-                </ul>
+              <div className="meta-item">
+                <span className="meta-label">Daily Budget</span>
+                <span className="meta-value">{formatUsd(dailyBudgetUsd)}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Per-Tx Limit</span>
+                <span className="meta-value">{formatUsd(liveLease?.perTxUsd ?? 0)}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Operator</span>
+                <span className="meta-value">{titleCase(currentMode ?? 'idle')}</span>
               </div>
             </div>
-            <div className="scope-note">
-              Scope note: these limits apply to agent requests executed through Boundless runtime/controller. Direct wallet transfers outside this flow are not blocked.
+            <div className="budget-bar">
+              <div className="bar-segment spent" style={{ width: `${spentPercent}%` }} />
+              <div className="bar-segment left" style={{ width: `${remainingPercent}%` }} />
+            </div>
+            <div className="budget-labels">
+              <span>Spent {formatUsd(spentUsd)}</span>
+              <span className="remaining">{formatUsd(remainingDailyUsd)} left</span>
             </div>
           </div>
 
-          <div className="card">
-            <div className="section-heading">
-              <div>
-                <h2>Current Live Rule</h2>
-                <p className="section-copy">
-                  This section answers one question: what can the agent do right now?
-                </p>
-              </div>
-              <div className="status-row">
-                <span className={`pill ${leaseState.tone}`}>Rule: {leaseState.label}</span>
-                <span className={`pill ${currentMode === 'active' ? 'ok' : 'warn'}`}>Operator: {titleCase(currentMode ?? 'idle')}</span>
-                <span className="pill ok">Controller: {controller.source === 'onchain' ? 'Onchain' : 'Local'}</span>
-              </div>
+          <div className="card sidebar-card compact">
+            <div className="card-header">
+              <h2>Operator Mode</h2>
             </div>
-
-            <div className="stack-list">
-              <div className="stack-row"><span className="stack-k">Protected Wallet</span><span className="stack-v mono">{shortHash(liveLease?.walletAddress)}</span></div>
-              <div className="stack-row"><span className="stack-k">Rule ID</span><span className="stack-v mono">{shortHash(liveLease?.leaseId)}</span></div>
-              <div className="stack-row"><span className="stack-k">Max Per Action</span><span className="stack-v">{formatUsd(liveLease?.perTxUsd ?? 0)}</span></div>
-              <div className="stack-row"><span className="stack-k">Daily Budget</span><span className="stack-v">{formatUsd(dailyBudgetUsd)}</span></div>
-              <div className="stack-row"><span className="stack-k">Allowed Assets</span><span className="stack-v">{liveLease?.allowedAssets?.join(', ') || 'Not loaded yet'}</span></div>
-              <div className="stack-row"><span className="stack-k">Allowed Protocols</span><span className="stack-v">{liveLease?.allowedProtocols?.join(', ') || 'Not loaded yet'}</span></div>
-              <div className="stack-row"><span className="stack-k">Expiry</span><span className="stack-v">{formatTimestamp(liveLease?.expiresAt)}</span></div>
-              <div className="stack-row"><span className="stack-k">Current Operator Mode</span><span className="stack-v">{titleCase(currentMode ?? 'idle')}</span></div>
-              <div className="stack-row"><span className="stack-k">If Agent Requests Now</span><span className="stack-v">{nextGateLabel(currentMode, liveLease?.status)}</span></div>
+            <div className="mode-selector">
+              <button className={`mode-btn ${currentMode === 'active' ? 'active' : ''}`}>
+                <span className="mode-dot green"></span>
+                Active
+              </button>
+              <button className={`mode-btn ${currentMode === 'review' ? 'active' : ''}`}>
+                <span className="mode-dot amber"></span>
+                Review
+              </button>
+              <button className={`mode-btn ${currentMode === 'paused' ? 'active' : ''}`}>
+                <span className="mode-dot red"></span>
+                Paused
+              </button>
             </div>
-
-            <div className="budget-panel">
-              <div className="budget-panel-copy">
-                <div className="budget-panel-title">Budget Envelope</div>
-                <div className="budget-panel-text">
-                  If the next request breaks this rule, the system should resize it or block it before execution.
-                </div>
-              </div>
-              <div className="budget-panel-values">
-                <span>Spent: {formatUsd(spentUsd)}</span>
-                <span className="budget-remaining">Remaining: {formatUsd(remainingDailyUsd)}</span>
-              </div>
-              <div className="budget-bar">
-                <div className="bar-segment spent" style={{ width: `${spentPercent}%` }} />
-                <div className="bar-segment left" style={{ width: `${remainingPercent}%` }} />
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h2>What Your Operator Mode Means</h2>
-            <div className="stack-list">
-              <div className="stack-row"><span className="stack-k">Current Mode</span><span className="stack-v">{titleCase(currentMode ?? 'idle')}</span></div>
-              <div className="stack-row"><span className="stack-k">Meaning</span><span className="stack-v">{modeMeaning(currentMode)}</span></div>
-              <div className="stack-row"><span className="stack-k">Next Request</span><span className="stack-v">{nextGateLabel(currentMode, liveLease?.status)}</span></div>
-              <div className="stack-row"><span className="stack-k">Controller Contract</span><span className="stack-v mono">{shortHash(controller.address ?? undefined)}</span></div>
-              <div className="stack-row"><span className="stack-k">Hosted Writes</span><span className="stack-v">{controller.actionsEnabled ? 'Enabled' : 'Read only'}</span></div>
-            </div>
+            <p className="mode-hint">{modeMeaning(currentMode)}</p>
           </div>
         </aside>
 
         <main className="dashboard-main">
-          <div className="card">
-            <h2>Live Overview</h2>
-            <div className="kpi-strip">
-              <div className="kpi-tile">
-                <div className="k">Rule Status</div>
-                <div className="v">{leaseState.label}</div>
-              </div>
-              <div className="kpi-tile">
-                <div className="k">Budget Remaining</div>
-                <div className="v">{formatUsd(remainingDailyUsd)}</div>
-              </div>
-              <div className="kpi-tile">
-                <div className="k">Latest Tx</div>
-                <div className="v mono">{shortHash(latestSuccessRound?.txHash ?? historicalReferencePacket?.execution.txHash)}</div>
-              </div>
-              <div className="kpi-tile">
-                <div className="k">Round Mix</div>
-                <div className="v">A {approvedCount} · B {blockedCount} · R {resizeCount}</div>
-              </div>
+          <div className="stats-bar">
+            <div className="stat-card">
+              <div className="stat-label">Rule Status</div>
+              <div className={`stat-value ${leaseState.tone === 'ok' ? 'green' : 'amber'}`}>{leaseState.label}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Budget Left</div>
+              <div className="stat-value lime">{formatUsd(remainingDailyUsd)}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Approved</div>
+              <div className="stat-value green">{approvedCount}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">Blocked</div>
+              <div className="stat-value amber">{blockedCount}</div>
             </div>
           </div>
 
@@ -266,54 +212,37 @@ export function SubmissionPage({
           />
 
           {showHistoricalMismatch ? (
-            <div className="response-banner history-banner">
-              Historical proof below is from an older rule, not the wallet currently protected above.
-              Current live wallet: {shortHash(liveLease?.walletAddress)}.
-              Historical proof wallet: {shortHash(historicalWallet ?? undefined)}.
-              Current live rule: {shortHash(liveLease?.leaseId)}.
-              Historical rule: {shortHash(historicalLeaseId ?? undefined)}.
+            <div className="response-banner error">
+              Historical proof is from an older rule. Live wallet: {shortHash(liveLease?.walletAddress)}
             </div>
           ) : null}
 
           <div className="card">
-            <div className="section-heading">
-              <div>
-                <h2>Latest Proof Snapshot</h2>
-                <p className="section-copy">
-                  This is the latest confirmed result in the system: approved execution or blocked request.
-                </p>
-              </div>
-              {historicalReferencePacket ? (
-                <div className="status-row">
-                  <span className="pill ok">Consumer: {historicalReferencePacket.request.consumerName}</span>
-                  <span className={`pill ${proofOutcomeTone}`}>Decision: {titleCase(historicalReferencePacket.decision.outcome)}</span>
-                  <span className={`pill ${proofZoneTone}`}>Zone: {titleCase(historicalReferencePacket.decision.trustZone)}</span>
-                  <span className={`pill ${proofExecutionTone}`}>Execution: {titleCase(historicalReferencePacket.execution.status)}</span>
-                </div>
-              ) : null}
+            <div className="card-header">
+              <h2>Latest Activity</h2>
+            </div>
+            <div className="activity-feed">
+              {rounds.length > 0 ? (
+                rounds.slice(0, 5).map((round) => (
+                  <div key={`${round.generatedAt}-${round.requestId}-feed`} className="activity-row">
+                    <div className="activity-main">
+                      <span className={`pill ${toneForOutcome(round.outcome)}`}>{titleCase(round.outcome)}</span>
+                      <span className="activity-summary">{round.summary}</span>
+                    </div>
+                    <div className="activity-meta">
+                      <span>{formatTimestamp(round.generatedAt)}</span>
+                      <span className="mono">{shortHash(round.txHash)}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state">No activity yet</div>
+              )}
             </div>
           </div>
 
-          {historicalReferencePacket ? (
-            <div className="card">
-              <h2>Latest Request Detail</h2>
-              <div className="stack-list">
-                <div className="stack-row"><span className="stack-k">Action</span><span className="stack-v">{titleCase(historicalReferencePacket.request.action)}</span></div>
-                <div className="stack-row"><span className="stack-k">From → To</span><span className="stack-v">{historicalReferencePacket.request.fromToken} → {historicalReferencePacket.request.toToken}</span></div>
-                <div className="stack-row"><span className="stack-k">Venue</span><span className="stack-v">{historicalReferencePacket.request.venueHint}</span></div>
-                <div className="stack-row"><span className="stack-k">Requested</span><span className="stack-v">{formatUsd(historicalReferencePacket.request.notionalUsd)}</span></div>
-                <div className="stack-row"><span className="stack-k">Allowed</span><span className="stack-v">{formatUsd(historicalReferencePacket.decision.finalNotionalUsd)}</span></div>
-                <div className="stack-row"><span className="stack-k">Tx Hash</span><span className="stack-v mono">{shortHash(historicalReferencePacket.execution.txHash)}</span></div>
-                <div className="stack-row"><span className="stack-k">Decision Reason</span><span className="stack-v">{historicalReferencePacket.decision.rationale}</span></div>
-              </div>
-            </div>
-          ) : null}
-
           <details className="card advanced-panel">
-            <summary>Advanced History (Optional)</summary>
-            <p>
-              These rows are full history logs and may include older rules and older wallets.
-            </p>
+            <summary>View History</summary>
             <table>
               <thead>
                 <tr>
@@ -345,37 +274,6 @@ export function SubmissionPage({
               </tbody>
             </table>
           </details>
-
-          <div className="card">
-            <h2>Recent Activity Feed</h2>
-            <div className="status-row">
-              <span className="pill ok">All {rounds.length}</span>
-              <span className="pill ok">Approved {approvedCount}</span>
-              <span className="pill warn">Blocked {blockedCount}</span>
-              <span className="pill warn">Resized {resizeCount}</span>
-            </div>
-            <div className="activity-feed">
-              {rounds.slice(0, 10).map((round) => (
-                <div key={`${round.generatedAt}-${round.requestId}-feed`} className="activity-row">
-                  <div className="activity-main">
-                    <span className={`pill ${toneForOutcome(round.outcome)}`}>{titleCase(round.outcome)}</span>
-                    <span className="activity-summary">{round.summary}</span>
-                  </div>
-                  <div className="activity-meta">
-                    <span>{formatTimestamp(round.generatedAt)}</span>
-                    <span className="mono">{shortHash(round.txHash)}</span>
-                  </div>
-                </div>
-              ))}
-              {rounds.length === 0 ? (
-                <div className="activity-row">
-                  <div className="activity-main">
-                    <span className="activity-summary">No rounds recorded yet.</span>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
         </main>
       </div>
 

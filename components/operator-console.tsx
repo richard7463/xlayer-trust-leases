@@ -42,7 +42,7 @@ const ACTION_GROUPS: Array<{
     label: 'Rule',
     actions: [
       { action: 'issue-lease', label: 'Save Rule', help: 'Write or replace this rule on X Layer with the settings above.', tone: 'primary' },
-      { action: 'revoke-lease', label: 'Disable Rule', help: 'Cancel the current rule immediately.', tone: 'warn' },
+      { action: 'revoke-lease', label: 'Disable', help: 'Cancel the current rule immediately.', tone: 'warn' },
     ],
   },
   {
@@ -57,7 +57,7 @@ const ACTION_GROUPS: Array<{
     label: 'Runtime',
     actions: [
       { action: 'run-round', label: 'Run Round', help: 'Ask the runner to create the next request.', tone: 'primary' },
-      { action: 'refresh-proof', label: 'Refresh Proof', help: 'Reload lease, receipt, and dashboard proof.', tone: 'neutral' },
+      { action: 'refresh-proof', label: 'Refresh', help: 'Reload lease, receipt, and dashboard proof.', tone: 'neutral' },
     ],
   },
 ];
@@ -103,6 +103,7 @@ export function OperatorConsole({
   const [busyAction, setBusyAction] = useState<ControlAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [metaExpanded, setMetaExpanded] = useState(false);
 
   useEffect(() => {
     if (governedWallet) {
@@ -161,6 +162,15 @@ export function OperatorConsole({
   }, []);
 
   const meta = useMemo(
+    () => [
+      `Rule: ${leaseId ? leaseId.slice(0, 8) + '...' : 'none'}`,
+      `Status: ${leaseStatus ?? 'not issued'}`,
+      `Operator: ${operatorMode ?? 'idle'}`,
+    ],
+    [leaseId, leaseStatus, operatorMode],
+  );
+
+  const fullMeta = useMemo(
     () => [
       `Rule: ${leaseId ?? 'none'}`,
       `Status: ${leaseStatus ?? 'not issued'}`,
@@ -259,123 +269,192 @@ export function OperatorConsole({
   }
 
   return (
-    <div className="card">
-      <h2>Rule Console</h2>
-      <p>
-        Set the wallet, budget, assets, protocols, and expiry first. Then save the rule onchain.
-      </p>
-
-      <div className="action-meta">
-        {meta.map((item) => (
-          <span key={item} className="pill ok">{item}</span>
-        ))}
-      </div>
-
-      <div className="lease-config-grid">
-        <div className="note-row">
-          <label htmlFor="governed-wallet" className="note-label">Governed Wallet</label>
-          <input
-            id="governed-wallet"
-            value={walletAddress}
-            onChange={(event) => setWalletAddress(event.target.value)}
-            placeholder="0x wallet protected by this rule"
-            className="note-input mono"
-          />
-        </div>
-        <div className="note-row">
-          <label htmlFor="per-tx-usd" className="note-label">Per-Tx Limit (USD)</label>
-          <input
-            id="per-tx-usd"
-            value={perTxUsdInput}
-            onChange={(event) => setPerTxUsdInput(event.target.value)}
-            placeholder="3"
-            className="note-input"
-          />
-        </div>
-        <div className="note-row">
-          <label htmlFor="daily-budget-usd" className="note-label">Daily Budget (USD)</label>
-          <input
-            id="daily-budget-usd"
-            value={dailyBudgetUsdInput}
-            onChange={(event) => setDailyBudgetUsdInput(event.target.value)}
-            placeholder="15"
-            className="note-input"
-          />
+    <div className="card console-card">
+      <div className="console-header">
+        <h2>Controls</h2>
+        <div className="console-meta">
+          {meta.map((item) => (
+            <span key={item} className="pill ok">{item}</span>
+          ))}
+          <button
+            type="button"
+            className="pill-btn"
+            onClick={() => setMetaExpanded(!metaExpanded)}
+          >
+            {metaExpanded ? 'Less' : 'More'}
+          </button>
+          {metaExpanded && (
+            <div className="meta-expanded">
+              {fullMeta.map((item) => (
+                <span key={item} className="pill">{item}</span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <details className="settings-advanced">
-        <summary>Advanced Rule Settings</summary>
-        <div className="lease-config-grid">
-          <div className="note-row">
-            <label htmlFor="base-asset" className="note-label">Base Asset</label>
+      <div className="console-form">
+        <div className="form-row">
+          <div className="form-field">
+            <label htmlFor="governed-wallet" className="note-label">Governed Wallet</label>
             <input
-              id="base-asset"
-              value={baseAssetInput}
-              onChange={(event) => setBaseAssetInput(event.target.value.toUpperCase())}
-              placeholder="USDT0"
+              id="governed-wallet"
+              value={walletAddress}
+              onChange={(event) => setWalletAddress(event.target.value)}
+              placeholder="0x..."
+              className="note-input mono"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="per-tx-usd" className="note-label">Per-Tx Limit</label>
+            <input
+              id="per-tx-usd"
+              value={perTxUsdInput}
+              onChange={(event) => setPerTxUsdInput(event.target.value)}
+              placeholder="3"
               className="note-input"
             />
           </div>
-        <div className="note-row">
-          <label htmlFor="allowed-assets" className="note-label">Allowed Assets (CSV)</label>
-          <input
-            id="allowed-assets"
-            value={allowedAssetsInput}
-            onChange={(event) => setAllowedAssetsInput(event.target.value)}
-            placeholder="USDT0,USDC,OKB"
-            className="note-input"
-          />
+          <div className="form-field">
+            <label htmlFor="daily-budget-usd" className="note-label">Daily Budget</label>
+            <input
+              id="daily-budget-usd"
+              value={dailyBudgetUsdInput}
+              onChange={(event) => setDailyBudgetUsdInput(event.target.value)}
+              placeholder="15"
+              className="note-input"
+            />
+          </div>
         </div>
-        <div className="note-row">
-          <label htmlFor="allowed-protocols" className="note-label">Allowed Protocols (CSV)</label>
-          <input
-            id="allowed-protocols"
-            value={allowedProtocolsInput}
-            onChange={(event) => setAllowedProtocolsInput(event.target.value)}
-            placeholder="okx-aggregator,quickswap"
-            className="note-input"
-          />
-        </div>
-        <div className="note-row">
-          <label htmlFor="expiry-hours" className="note-label">Expiry Hours</label>
-          <input
-            id="expiry-hours"
-            value={expiryHoursInput}
-            onChange={(event) => setExpiryHoursInput(event.target.value)}
-            placeholder="24"
-            className="note-input"
-          />
-        </div>
-        </div>
-      </details>
 
-      <div className="note-row">
-        <label htmlFor="operator-note" className="note-label">Action Note</label>
-        <input
-          id="operator-note"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          placeholder="optional rule note or operator command reason"
-          className="note-input"
-        />
+        <details className="settings-advanced">
+          <summary>Advanced Settings</summary>
+          <div className="form-row">
+            <div className="form-field">
+              <label htmlFor="base-asset" className="note-label">Base Asset</label>
+              <input
+                id="base-asset"
+                value={baseAssetInput}
+                onChange={(event) => setBaseAssetInput(event.target.value.toUpperCase())}
+                placeholder="USDT0"
+                className="note-input"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="allowed-assets" className="note-label">Allowed Assets</label>
+              <input
+                id="allowed-assets"
+                value={allowedAssetsInput}
+                onChange={(event) => setAllowedAssetsInput(event.target.value)}
+                placeholder="USDT0,USDC,OKB"
+                className="note-input"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="allowed-protocols" className="note-label">Allowed Protocols</label>
+              <input
+                id="allowed-protocols"
+                value={allowedProtocolsInput}
+                onChange={(event) => setAllowedProtocolsInput(event.target.value)}
+                placeholder="okx-aggregator,quickswap"
+                className="note-input"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="expiry-hours" className="note-label">Expiry Hours</label>
+              <input
+                id="expiry-hours"
+                value={expiryHoursInput}
+                onChange={(event) => setExpiryHoursInput(event.target.value)}
+                placeholder="24"
+                className="note-input"
+              />
+            </div>
+          </div>
+        </details>
+
+        <div className="form-field note-field">
+          <label htmlFor="operator-note" className="note-label">Note (optional)</label>
+          <input
+            id="operator-note"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="optional rule note or operator command reason"
+            className="note-input"
+          />
+        </div>
       </div>
 
-      <details className="settings-advanced" open>
-        <summary>Member Wallet Budget</summary>
-        <div className="lease-config-grid">
-          <div className="note-row">
+      <div className="console-actions">
+        <div className="action-group">
+          <div className="action-group-label">Rule</div>
+          <div className="action-buttons">
+            {ACTION_GROUPS[0].actions.map((item) => (
+              <button
+                key={item.action}
+                type="button"
+                className={`action-button ${item.tone ?? 'neutral'}`}
+                disabled={busyAction !== null || !actionsEnabled}
+                onClick={() => runAction(item.action)}
+              >
+                {busyAction === item.action ? '...' : item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="action-group">
+          <div className="action-group-label">Operator</div>
+          <div className="action-buttons">
+            {ACTION_GROUPS[1].actions.map((item) => (
+              <button
+                key={item.action}
+                type="button"
+                className={`action-button ${item.tone ?? 'neutral'}`}
+                disabled={busyAction !== null || !actionsEnabled}
+                onClick={() => runAction(item.action)}
+              >
+                {busyAction === item.action ? '...' : item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="action-group">
+          <div className="action-group-label">Runtime</div>
+          <div className="action-buttons">
+            {ACTION_GROUPS[2].actions.map((item) => (
+              <button
+                key={item.action}
+                type="button"
+                className={`action-button ${item.tone ?? 'neutral'}`}
+                disabled={
+                  busyAction !== null ||
+                  !actionsEnabled ||
+                  (item.action === 'run-round' && !runRoundEnabled)
+                }
+                onClick={() => runAction(item.action)}
+              >
+                {busyAction === item.action ? '...' : item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <details className="settings-advanced member-section">
+        <summary>Member Budget Policy</summary>
+        <div className="form-row">
+          <div className="form-field">
             <label htmlFor="member-wallet" className="note-label">Member Wallet</label>
             <input
               id="member-wallet"
               value={memberAddressInput}
               onChange={(event) => setMemberAddressInput(event.target.value)}
-              placeholder="0x member wallet that can spend treasury funds"
+              placeholder="0x..."
               className="note-input mono"
             />
           </div>
-          <div className="note-row">
-            <label htmlFor="member-per-tx" className="note-label">Member Per-Tx (USD)</label>
+          <div className="form-field">
+            <label htmlFor="member-per-tx" className="note-label">Per-Tx</label>
             <input
               id="member-per-tx"
               value={memberPerTxInput}
@@ -384,8 +463,8 @@ export function OperatorConsole({
               className="note-input"
             />
           </div>
-          <div className="note-row">
-            <label htmlFor="member-daily" className="note-label">Member Daily (USD)</label>
+          <div className="form-field">
+            <label htmlFor="member-daily" className="note-label">Daily</label>
             <input
               id="member-daily"
               value={memberDailyInput}
@@ -394,8 +473,8 @@ export function OperatorConsole({
               className="note-input"
             />
           </div>
-          <div className="note-row">
-            <label htmlFor="member-enabled" className="note-label">Policy Status</label>
+          <div className="form-field">
+            <label className="note-label">Status</label>
             <div className="checkbox-wrap">
               <input
                 id="member-enabled"
@@ -407,49 +486,16 @@ export function OperatorConsole({
             </div>
           </div>
         </div>
-        <div className="action-row">
-          <div>
-            <button
-              type="button"
-              className="action-button primary"
-              disabled={busyAction !== null || !actionsEnabled}
-              onClick={() => runAction('set-member-policy')}
-            >
-              {busyAction === 'set-member-policy' ? 'Working...' : 'Save Member Budget'}
-            </button>
-            <div className="action-help">Owner writes per-member spending limits onchain. Any member request above this budget is reverted.</div>
-          </div>
-        </div>
+        <button
+          type="button"
+          className="action-button primary"
+          disabled={busyAction !== null || !actionsEnabled}
+          onClick={() => runAction('set-member-policy')}
+        >
+          {busyAction === 'set-member-policy' ? 'Saving...' : 'Save Member'}
+        </button>
       </details>
 
-      <div className="action-groups">
-        {ACTION_GROUPS.map((group) => (
-          <div key={group.label} className="action-group">
-            <div className="action-group-label">{group.label}</div>
-            <div className="action-row">
-              {group.actions.map((item) => (
-                <div key={item.action}>
-                  <button
-                    type="button"
-                    className={`action-button ${item.tone ?? 'neutral'}`}
-                    disabled={
-                      busyAction !== null ||
-                      !actionsEnabled ||
-                      (item.action === 'run-round' && !runRoundEnabled)
-                    }
-                    onClick={() => runAction(item.action)}
-                  >
-                    {busyAction === item.action ? 'Working...' : item.label}
-                  </button>
-                  <div className="action-help">{item.help}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {controllerNote ? <div className="response-banner">{controllerNote}</div> : null}
       {message ? <div className="response-banner success">{message}</div> : null}
       {error ? <div className="response-banner error">{error}</div> : null}
 
