@@ -64,6 +64,23 @@ function buildHostedLease(env: ReturnType<typeof readRuntimeEnv>, walletAddress:
   };
 }
 
+function publicControlError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/nonce too low|nonce provided|tx nonce|next nonce|already been used|nonce has already been used/i.test(message)) {
+    return 'X Layer controller nonce moved while writing. The app now retries with the pending nonce; wait a few seconds and click once more if this request was already in flight.';
+  }
+  if (/insufficient funds|exceeds the balance|fee cap/i.test(message)) {
+    return 'The controller wallet needs more OKB for X Layer gas before this action can be written onchain.';
+  }
+  if (/user rejected|denied transaction/i.test(message)) {
+    return 'Wallet signature was rejected.';
+  }
+  if (/Hosted run-round is not enabled/i.test(message)) {
+    return message;
+  }
+  return message.split('\n')[0]?.slice(0, 320) || 'Control action failed.';
+}
+
 async function runHostedControlAction(action: ControlAction, note?: string, requestedWalletAddress?: string) {
   const env = readRuntimeEnv(process.env);
   const controllerConfig = readControllerConfig(process.env);
@@ -75,9 +92,6 @@ async function runHostedControlAction(action: ControlAction, note?: string, requ
   switch (action) {
     case 'issue-lease': {
       const activeLease = await readOnchainActiveLease(controllerConfig, env.LEASE_CONSUMER_NAME);
-      if (activeLease?.status === 'active') {
-        await setLeaseStatusOnchain(controllerConfig, activeLease.leaseId, 'revoked', 'superseded by new hosted lease');
-      }
       const walletAddress = requestedWalletAddress && isAddress(requestedWalletAddress)
         ? requestedWalletAddress
         : env.XLAYER_TREASURY_ADDRESS || getHostedSettlementAddress(env);
@@ -86,6 +100,13 @@ async function runHostedControlAction(action: ControlAction, note?: string, requ
       }
       const issuedLease = buildHostedLease(env, walletAddress, note);
       const txHash = await issueLeaseOnchain(controllerConfig, issuedLease);
+      if (activeLease?.status === 'active') {
+        try {
+          await setLeaseStatusOnchain(controllerConfig, activeLease.leaseId, 'revoked', 'superseded by new hosted lease');
+        } catch (error) {
+          console.warn('[trust-leases] old lease revoke failed after replacement', publicControlError(error));
+        }
+      }
       return `controller_tx=${txHash}`;
     }
     case 'revoke-lease': {
@@ -218,7 +239,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : 'Control action failed.' },
+      { ok: false, error: publicControlError(error) },
       { status: 500 }
     );
   }

@@ -444,7 +444,7 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
       </div>
 
       <div className="footer">
-        Built on <a href="#">X Layer</a> · Dashboard reads `data/trust-leases` directly
+        Built on <a href="#">X Layer</a> · Reads the controller contract plus runtime proof artifacts
       </div>
     </div>
   );

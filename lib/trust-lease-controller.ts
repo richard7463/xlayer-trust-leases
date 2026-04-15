@@ -104,6 +104,7 @@ export type ReceiptPacketLike = {
 };
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address;
+let controllerWriteQueue: Promise<void> = Promise.resolve();
 
 function parseBool(value: string | undefined, fallback = false): boolean {
   if (!value) return fallback;
@@ -306,7 +307,47 @@ function walletClient(config: ControllerConfig) {
   });
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function parseNextNonce(message: string): number | null {
+  const match = message.match(/next nonce\s+(\d+)/i);
+  if (!match?.[1]) {
+    return null;
+  }
+  const nonce = Number(match[1]);
+  return Number.isInteger(nonce) && nonce >= 0 ? nonce : null;
+}
+
+function isRecoverableNonceError(error: unknown): boolean {
+  const message = errorMessage(error);
+  return /nonce too low|nonce provided|tx nonce|next nonce|already been used|nonce has already been used/i.test(message);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function enqueueControllerWrite<T>(operation: () => Promise<T>): Promise<T> {
+  const next = controllerWriteQueue.then(operation, operation);
+  controllerWriteQueue = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  return next;
+}
+
 async function writeController(config: ControllerConfig, functionName: 'issueLease' | 'setLeaseStatus' | 'setOperatorMode' | 'anchorReceipt', args: readonly unknown[]): Promise<Hex> {
+  return enqueueControllerWrite(() => writeControllerNow(config, functionName, args));
+}
+
+async function writeControllerNow(config: ControllerConfig, functionName: 'issueLease' | 'setLeaseStatus' | 'setOperatorMode' | 'anchorReceipt', args: readonly unknown[]): Promise<Hex> {
   if (!config.controllerAddress) {
     throw new Error('Missing LEASE_CONTROLLER_ADDRESS.');
   }
@@ -320,17 +361,34 @@ async function writeController(config: ControllerConfig, functionName: 'issueLea
     functionName: functionName as never,
     args: args as never,
   } as never);
-  const hash = await wallet.writeContract(request);
-  try {
-    await pub.waitForTransactionReceipt({ hash });
-  } catch (error) {
-    console.warn(
-      '[trust-leases] controller tx broadcasted but receipt polling failed',
-      hash,
-      error instanceof Error ? error.message : error,
-    );
+
+  let lastError: unknown;
+  let nonce = await pub.getTransactionCount({ address: account.address, blockTag: 'pending' });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const hash = await wallet.writeContract({ ...(request as object), nonce } as never);
+      try {
+        await pub.waitForTransactionReceipt({ hash });
+      } catch (error) {
+        console.warn(
+          '[trust-leases] controller tx broadcasted but receipt polling failed',
+          hash,
+          error instanceof Error ? error.message : error,
+        );
+      }
+      return hash;
+    } catch (error) {
+      lastError = error;
+      if (!isRecoverableNonceError(error) || attempt === 2) {
+        break;
+      }
+      const parsedNonce = parseNextNonce(errorMessage(error));
+      await sleep(250 * (attempt + 1));
+      nonce = parsedNonce ?? await pub.getTransactionCount({ address: account.address, blockTag: 'pending' });
+    }
   }
-  return hash;
+
+  throw lastError instanceof Error ? lastError : new Error('Controller write failed.');
 }
 
 export async function issueLeaseOnchain(config: ControllerConfig, lease: LeaseLike): Promise<Hex> {
