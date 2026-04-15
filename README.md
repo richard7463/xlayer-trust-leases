@@ -1,11 +1,9 @@
 # X Layer Trust Leases
 
-![Track](https://img.shields.io/badge/Track-Human%20Track%20%7C%20X%20Layer%20Arena-0f766e)
-![Network](https://img.shields.io/badge/Network-X%20Layer%20Mainnet-111827)
-![Primitive](https://img.shields.io/badge/Primitive-Execution%20Lease-c2410c)
-![Scope](https://img.shields.io/badge/Scope-Wallet%20%7C%20Budget%20%7C%20Protocol%20%7C%20Expiry-2563eb)
-![Mode](https://img.shields.io/badge/Mode-Web%20App%20%2B%20X%20Layer%20Controller-4f46e5)
-![Control](https://img.shields.io/badge/Control-Issue%20%7C%20Pause%20%7C%20Review%20%7C%20Resume%20%7C%20Revoke-065f46)
+![Track](https://img.shields.io/badge/Track-Build%20X%20Skills%20Arena-0f766e)
+![Skill](https://img.shields.io/badge/Skill-Pre-Execution%20Governance-111827)
+![Network](https://img.shields.io/badge/Network-X%20Layer%20196-2563eb)
+![Proof](https://img.shields.io/badge/Live%20Proof-Apr%2015%202026-success)
 
 The safe way to give agents real money on X Layer.
 

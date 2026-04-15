@@ -21,28 +21,28 @@ type ControlAction = 'issue-lease' | 'revoke-lease' | 'pause' | 'review' | 'resu
 
 const ACTION_GROUPS: Array<{
   label: string;
-  actions: Array<{ action: ControlAction; label: string; tone?: 'primary' | 'warn' | 'neutral' }>;
+  actions: Array<{ action: ControlAction; label: string; help: string; tone?: 'primary' | 'warn' | 'neutral' }>;
 }> = [
   {
     label: 'Lease',
     actions: [
-      { action: 'issue-lease', label: 'Issue Lease', tone: 'primary' },
-      { action: 'revoke-lease', label: 'Revoke', tone: 'warn' },
+      { action: 'issue-lease', label: 'Issue Lease', help: 'Create or replace the wallet permission on X Layer.', tone: 'primary' },
+      { action: 'revoke-lease', label: 'Revoke', help: 'Cancel the agent permission immediately.', tone: 'warn' },
     ],
   },
   {
     label: 'Operator',
     actions: [
-      { action: 'pause', label: 'Pause', tone: 'warn' },
-      { action: 'review', label: 'Review', tone: 'warn' },
-      { action: 'resume', label: 'Resume', tone: 'primary' },
+      { action: 'pause', label: 'Pause', help: 'Stop autonomous execution until resumed.', tone: 'warn' },
+      { action: 'review', label: 'Review', help: 'Require a human review posture before execution.', tone: 'warn' },
+      { action: 'resume', label: 'Resume', help: 'Return the agent to active governed mode.', tone: 'primary' },
     ],
   },
   {
     label: 'Runtime',
     actions: [
-      { action: 'run-round', label: 'Run Round', tone: 'primary' },
-      { action: 'refresh-proof', label: 'Refresh Proof', tone: 'neutral' },
+      { action: 'run-round', label: 'Run Round', help: 'Ask the runner to create the next agent request.', tone: 'primary' },
+      { action: 'refresh-proof', label: 'Refresh Proof', help: 'Reload the latest lease, receipt, and proof data.', tone: 'neutral' },
     ],
   },
 ];
@@ -110,7 +110,7 @@ export function OperatorConsole({
       <h2>Operator Console</h2>
       <p>
         {actionsEnabled
-          ? 'Issue a new lease, change operator posture, run a governed round, or refresh the visible proof without leaving the app.'
+          ? 'Use this panel like a spending remote control. Pick the wallet the agent may use, issue a bounded lease, then pause, review, resume, or revoke that authority.'
           : 'This deployment is currently operating as a proof viewer. Use a writable runner for live control actions until the backend is fully externalized.'}
       </p>
 
@@ -148,19 +148,21 @@ export function OperatorConsole({
             <div className="action-group-label">{group.label}</div>
             <div className="action-row">
               {group.actions.map((item) => (
-                <button
-                  key={item.action}
-                  type="button"
-                  className={`action-button ${item.tone ?? 'neutral'}`}
-                  disabled={
-                    busyAction !== null ||
-                    !actionsEnabled ||
-                    (item.action === 'run-round' && !runRoundEnabled)
-                  }
-                  onClick={() => runAction(item.action)}
-                >
-                  {busyAction === item.action ? 'Working...' : item.label}
-                </button>
+                <div key={item.action}>
+                  <button
+                    type="button"
+                    className={`action-button ${item.tone ?? 'neutral'}`}
+                    disabled={
+                      busyAction !== null ||
+                      !actionsEnabled ||
+                      (item.action === 'run-round' && !runRoundEnabled)
+                    }
+                    onClick={() => runAction(item.action)}
+                  >
+                    {busyAction === item.action ? 'Working...' : item.label}
+                  </button>
+                  <div className="action-help">{item.help}</div>
+                </div>
               ))}
             </div>
           </div>

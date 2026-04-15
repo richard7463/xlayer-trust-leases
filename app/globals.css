@@ -883,6 +883,12 @@ td {
   opacity: 0.55;
   cursor: not-allowed;
 }
+.action-help {
+  color: var(--s2);
+  font-size: 11px;
+  line-height: 1.35;
+  margin-top: -4px;
+}
 .response-banner {
   margin-top: 14px;
   padding: 12px 14px;

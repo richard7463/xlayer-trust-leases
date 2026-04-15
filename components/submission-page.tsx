@@ -105,6 +105,32 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
         </nav>
       </header>
 
+      <div className="card">
+        <h2>What this page is for</h2>
+        <p>
+          This dashboard lets a human give an agent limited permission to use one X Layer wallet.
+          The agent does not get unlimited control. It only gets a lease with a budget, token list, protocol list, and expiry.
+        </p>
+        <div className="info-grid">
+          <div className="info-card">
+            <div className="k">Step 1</div>
+            <div className="v">Choose the wallet the agent may operate</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Step 2</div>
+            <div className="v">Click Issue Lease to write the permission on X Layer</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Step 3</div>
+            <div className="v">Agent requests are checked against the lease</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Step 4</div>
+            <div className="v">Approved tx or blocked reason appears as proof</div>
+          </div>
+        </div>
+      </div>
+
       <div className="stats-bar">
         <div className="stat-card">
           <div className="stat-label">Lease Status</div>
@@ -134,6 +160,9 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
 
       <div className="card">
         <h2>Budget Usage</h2>
+        <p>
+          This is the daily spending envelope for the agent. If the agent request would exceed the budget, the system blocks or resizes it before execution.
+        </p>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
           <span style={{ fontSize: '13px' }}>Spent: {formatUsd(spentUsd)}</span>
           <span style={{ fontSize: '13px', color: 'var(--green)' }}>Remaining: {formatUsd(remainingDailyUsd)}</span>
@@ -146,36 +175,34 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
 
       <div className="grid-2">
         <div className="card">
-          <h2>How Wallet Control Works</h2>
+          <h2>1. Wallet Permission</h2>
           <p>
-            The user does not hand an agent full wallet control. The user chooses a governed wallet, issues a temporary lease,
-            and the agent can only act if its request fits that lease.
+            This is the wallet the agent is allowed to operate inside. Trust Leases does not expose full wallet control; it writes a temporary permission boundary for this wallet.
           </p>
           <div className="info-grid">
             <div className="info-card">
-              <div className="k">1. Governed Wallet</div>
+              <div className="k">Governed Wallet</div>
               <div className="v mono">{shortHash(liveLease?.walletAddress)}</div>
             </div>
             <div className="info-card">
-              <div className="k">2. Lease Boundary</div>
+              <div className="k">Max Per Action</div>
               <div className="v">{formatUsd(liveLease?.perTxUsd ?? 0)} per action</div>
             </div>
             <div className="info-card">
-              <div className="k">3. Agent Request</div>
+              <div className="k">Allowed Request</div>
               <div className="v">{packet ? `${packet.request.fromToken} -> ${packet.request.toToken}` : 'Waiting for request'}</div>
             </div>
             <div className="info-card">
-              <div className="k">4. Receipt</div>
+              <div className="k">Latest Receipt</div>
               <div className="v mono">{shortHash(controller.latestTxHash ?? latestSuccessRound?.txHash)}</div>
             </div>
           </div>
         </div>
 
         <div className="card">
-          <h2>X Layer Controller Evidence</h2>
+          <h2>2. X Layer Controller</h2>
           <p>
-            The contract is the public state layer: it stores active lease state, operator posture, and the latest receipt anchor.
-            The web app reads this state before rendering the dashboard.
+            This is the onchain contract that records the lease and operator state. If the controller is active, the page is not only reading local JSON; it is reading X Layer state.
           </p>
           <div className="info-grid">
             <div className="info-card">
@@ -214,7 +241,7 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
 
       <div className="grid-2">
         <div className="card">
-          <h2>Latest Approved Path</h2>
+          <h2>3. Latest Approved Result</h2>
           <div className="info-grid">
             <div className="info-card">
               <div className="k">Approved Round</div>
@@ -235,7 +262,7 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
         </div>
 
         <div className="card">
-          <h2>Latest Guardrail Event</h2>
+          <h2>4. Latest Blocked Result</h2>
           <div className="info-grid">
             <div className="info-card">
               <div className="k">Blocked Round</div>
