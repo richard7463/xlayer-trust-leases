@@ -10,7 +10,9 @@ X Layer Trust Leases is not another trading bot. It is a human-track primitive f
 
 A human issues a lease. The lease defines wallet scope, allowed assets, allowed protocols, allowed counterparties, per-tx limits, daily budget, and expiry. The agent submits a request against that lease. Only requests that stay inside the lease envelope can execute.
 
-The project already reuses a live X Layer Agentic Wallet execution path from existing workspace projects, writes explicit receipts for every round, and renders a judge-facing proof dashboard and submission page. The current proof set already includes a real X Layer transaction broadcasted through a lease-approved path.
+The project now wires the trust lease directly into the live `xlayer-strategy-office` round path. A strategy-office round reads the trust lease before it can broadcast, and the same round writes explicit trust-lease receipts plus a judge-facing proof dashboard and submission page. The web app now also exposes an in-app Operator Console for issue, pause, review, resume, revoke, run, and proof refresh actions, so the governance loop is operable inside the product instead of being trapped in CLI-only demos.
+
+The project also now includes a dedicated X Layer controller contract. In contract-driven mode, lease state, operator posture, and the latest receipt anchor are mirrored onchain, while the dashboard reads that controller state back into the live UI. That means the product is no longer only a local proof generator; it can operate as a hybrid web app with X Layer as the state authority for the core governance primitive.
 
 ## Your Track
 
@@ -37,7 +39,7 @@ This project uses the same OnchainOS-backed X Layer execution path already prove
 - OnchainOS swap execute for live X Layer execution when the lease approves the request
 - X Layer tx hash and explorer-linked receipt as proof output
 
-The lease is the pre-execution gate sitting above that path.
+The lease is the pre-execution gate sitting above that path, and the latest runtime proof shows that an expired lease now blocks strategy-office execution before broadcast.
 
 ## Demo Video Link
 

@@ -1,0 +1,18 @@
+{
+  "name": "xlayer-trust-leases-contracts",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "compile": "mkdir -p .hardhat-home .hardhat-config && HOME=$PWD/.hardhat-home XDG_CONFIG_HOME=$PWD/.hardhat-config hardhat compile",
+    "clean": "mkdir -p .hardhat-home .hardhat-config && HOME=$PWD/.hardhat-home XDG_CONFIG_HOME=$PWD/.hardhat-config hardhat clean",
+    "deploy:testnet": "mkdir -p .hardhat-home .hardhat-config && HOME=$PWD/.hardhat-home XDG_CONFIG_HOME=$PWD/.hardhat-config hardhat run scripts/deploy.ts --network xlayerTestnet",
+    "deploy:mainnet": "mkdir -p .hardhat-home .hardhat-config && HOME=$PWD/.hardhat-home XDG_CONFIG_HOME=$PWD/.hardhat-config hardhat run scripts/deploy.ts --network xlayer"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.24.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

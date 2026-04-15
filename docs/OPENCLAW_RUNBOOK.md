@@ -2,7 +2,7 @@
 
 ## Goal
 
-Run X Layer Trust Leases as a lease issuer and pre-execution gateway for a shared X Layer Agentic Wallet flow.
+Run X Layer Trust Leases as a lease issuer and pre-execution gateway for the shared `xlayer-strategy-office` Agentic Wallet flow.
 
 ## Environment
 
@@ -35,13 +35,17 @@ Run X Layer Trust Leases as a lease issuer and pre-execution gateway for a share
 ## Commands
 
 ```bash
+cd /path/to/xlayer-trust-leases
 npm install
 npm run check
 npm run lease:issue
 npm run preflight:treasury
 npm run operator:resume -- "openclaw runtime"
+
+cd /path/to/xlayer-strategy-office
+npm install
+npm run check
 npm run round:live
-npm run proof:render
 ```
 
 ## Runtime loop
@@ -49,9 +53,8 @@ npm run proof:render
 A practical OpenClaw loop is:
 
 ```bash
-cd /path/to/xlayer-trust-leases
+cd /path/to/xlayer-strategy-office
 npm run round:live
-npm run proof:render
 ```
 
 Run it every 10-15 minutes.
@@ -59,6 +62,7 @@ Run it every 10-15 minutes.
 ## Outputs
 
 - `data/trust-leases/live-proof-latest.json`
-- `data/trust-leases/proof-dashboard.html`
-- `data/trust-leases/submission.html`
 - `data/trust-leases/receipts/*.json`
+- `../xlayer-strategy-office/data/office/live-proof-latest.json`
+
+For interactive review, run the Next app in `xlayer-trust-leases` and open `/submission` plus `/proof`.

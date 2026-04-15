@@ -116,13 +116,16 @@ export class OnchainOsCliClient {
   private readonly timeoutMs: number;
 
   constructor(input?: { binPath?: string; timeoutMs?: number }) {
+    const configuredTimeoutMs = Number(process.env.ONCHAINOS_TIMEOUT_MS ?? "30000");
     this.bins = [
       input?.binPath,
       process.env.ONCHAINOS_BIN,
       path.join(os.homedir(), ".local", "bin", "onchainos"),
       "onchainos"
     ].filter((value): value is string => Boolean(value));
-    this.timeoutMs = input?.timeoutMs ?? 8_000;
+    this.timeoutMs =
+      input?.timeoutMs ??
+      (Number.isFinite(configuredTimeoutMs) && configuredTimeoutMs > 0 ? configuredTimeoutMs : 30_000);
   }
 
   private run(args: string[]): OnchainOsResponse {

@@ -5,6 +5,7 @@ import { summarizeProofPacket } from "../src/historian/proof.js";
 import { writeSubmissionSite } from "../src/historian/render-site.js";
 import { writeRoundArtifacts } from "../src/runtime/store.js";
 import { TrustLeaseAgent } from "../src/runtime/trust-lease-agent.js";
+import { anchorReceiptOnchain, buildArtifactUri, canWriteController, controllerConfigFromRuntimeEnv } from "../lib/trust-lease-controller.js";
 
 async function main(): Promise<void> {
   const env = readRuntimeEnvFromFiles();
@@ -18,6 +19,16 @@ async function main(): Promise<void> {
   });
   const index = JSON.parse(fs.readFileSync(artifacts.indexPath, "utf8"));
   const siteOutputs = writeSubmissionSite({ packet, index, baseDir: path.resolve(env.LEASE_DATA_DIR) });
+  const controllerConfig = controllerConfigFromRuntimeEnv(env);
+  let controllerTx: string | undefined;
+
+  if (canWriteController(controllerConfig)) {
+    controllerTx = await anchorReceiptOnchain(
+      controllerConfig,
+      packet,
+      buildArtifactUri(controllerConfig, path.relative(path.resolve(env.LEASE_DATA_DIR), artifacts.roundPath))
+    );
+  }
 
   console.log(summarizeProofPacket(packet));
   console.log(`source=${source}`);
@@ -28,6 +39,10 @@ async function main(): Promise<void> {
   console.log(`index=${artifacts.indexPath}`);
   console.log(`dashboard=${siteOutputs.proofDashboardPath}`);
   console.log(`submission=${siteOutputs.submissionPath}`);
+  if (controllerTx) {
+    console.log(`controller_tx=${controllerTx}`);
+    console.log(`controller=${controllerConfig.controllerAddress}`);
+  }
 }
 
 await main();

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { readRuntimeEnvFromFiles } from "../src/config/env.js";
 import { applyOperatorCommand, readOperatorState } from "../src/runtime/operator-state.js";
+import { canWriteController, controllerConfigFromRuntimeEnv, setOperatorModeOnchain } from "../lib/trust-lease-controller.js";
 
 const env = readRuntimeEnvFromFiles();
 const baseDir = path.resolve(env.LEASE_DATA_DIR);
@@ -32,3 +33,10 @@ const result = applyOperatorCommand({ baseDir, operatorName: env.LEASE_OPERATOR_
 console.log(`operator=${result.state.operatorName} | mode=${result.state.mode} | last_command=${result.state.lastCommand} | updated_at=${result.state.updatedAt}`);
 console.log(`state=${result.statePath}`);
 console.log(`event=${result.eventPath}`);
+
+const controllerConfig = controllerConfigFromRuntimeEnv(env);
+if (canWriteController(controllerConfig)) {
+  const txHash = await setOperatorModeOnchain(controllerConfig, result.state);
+  console.log(`controller_tx=${txHash}`);
+  console.log(`controller=${controllerConfig.controllerAddress}`);
+}

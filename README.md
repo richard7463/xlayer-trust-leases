@@ -4,6 +4,8 @@
 ![Network](https://img.shields.io/badge/Network-X%20Layer%20Mainnet-111827)
 ![Primitive](https://img.shields.io/badge/Primitive-Execution%20Lease-c2410c)
 ![Scope](https://img.shields.io/badge/Scope-Wallet%20%7C%20Budget%20%7C%20Protocol%20%7C%20Expiry-2563eb)
+![Mode](https://img.shields.io/badge/Mode-Web%20App%20%2B%20X%20Layer%20Controller-4f46e5)
+![Control](https://img.shields.io/badge/Control-Issue%20%7C%20Pause%20%7C%20Review%20%7C%20Resume%20%7C%20Revoke-065f46)
 
 Temporary, bounded, revocable execution authority for live X Layer agents.
 
@@ -28,6 +30,23 @@ This project is the missing middle between:
 
 ![Proof Dashboard](docs/assets/proof-dashboard-hero.png)
 
+## For Judges
+
+| Item | Evidence |
+|---|---|
+| Track fit | Human Track / X Layer Arena governance primitive |
+| Core primitive | Short-lived execution lease for X Layer agents |
+| Web surface | `submission` and `proof` routes with in-app Operator Console |
+| X Layer contract | [`contracts/contracts/TrustLeaseController.sol`](contracts/contracts/TrustLeaseController.sol) |
+| Deploy script | [`contracts/scripts/deploy.ts`](contracts/scripts/deploy.ts) |
+| Runtime bridge | [`scripts/live-round.ts`](scripts/live-round.ts) |
+| Lease issuance bridge | [`scripts/issue-lease.ts`](scripts/issue-lease.ts) |
+| Operator posture bridge | [`scripts/operator-command.ts`](scripts/operator-command.ts) |
+| Governed wallet | `0xdbc8e35ea466f85d57c0cc1517a81199b8549f04` |
+| Latest successful tx | [`0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece`](https://www.oklink.com/xlayer/tx/0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece) |
+| Latest proof packet | [`data/trust-leases/live-proof-latest.json`](data/trust-leases/live-proof-latest.json) |
+| Contract runbook | [docs/CONTRACT_RUNBOOK.md](docs/CONTRACT_RUNBOOK.md) |
+
 ## For Hackathon Judges
 
 > **Judge Summary**
@@ -35,7 +54,8 @@ This project is the missing middle between:
 > - **What this is:** a lease primitive for agent execution on X Layer, not another trading bot
 > - **What is bounded:** wallet, budget, assets, protocols, counterparties, expiry
 > - **What is different:** governance sits in the pre-execution path rather than only reading logs after the fact
-> - **Execution path:** reused from the live `xlayer-strategy-office` and shared Agentic Wallet flow already running in this workspace
+> - **Execution path:** the live `xlayer-strategy-office` round path now reads the trust lease before it can broadcast
+> - **Onchain controller:** lease state, operator posture, and receipt anchors can now be mirrored into a dedicated X Layer contract
 > - **Human posture:** issue, pause, review, resume, and revoke without giving full wallet access
 
 ### Current proof snapshot
@@ -44,17 +64,20 @@ This project is the missing middle between:
 |---|---|
 | Governed wallet | `0xdbc8e35ea466f85d57c0cc1517a81199b8549f04` |
 | Active consumer | `strategy-office` |
-| Active lease | `lease_7997019c-c5b8-4b8a-9104-589ba18ca3ae` |
-| Latest outcome | `resize` |
-| Latest execution | `broadcasted` |
-| Latest tx | [`0x5289c0f232e55e9d053ffee4d2e3269e2e2833c3cea41beff9c0ea476bd2d9f3`](https://www.oklink.com/xlayer/tx/0x5289c0f232e55e9d053ffee4d2e3269e2e2833c3cea41beff9c0ea476bd2d9f3) |
-| Latest receipt | [`examples/latest-receipt.sample.json`](examples/latest-receipt.sample.json) |
-| Latest proof packet | [`examples/latest-round.sample.json`](examples/latest-round.sample.json) |
+| Active lease | `lease_a65108f6-666c-4cc5-8be3-99007b6afada` |
+| Most recent round | `2026-04-14 12:16:51Z` |
+| Latest outcome | `block` |
+| Latest execution | `simulated` |
+| Latest rationale | `No material allocation drift produced a leaseable strategy-office request in this round.` |
+| Latest successful tx | [`0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece`](https://www.oklink.com/xlayer/tx/0xd956b78edeff2f815f50cc337dff1715f32026d42802518036701cee1212fece) |
+| Live runtime proof | [`data/trust-leases/live-proof-latest.json`](data/trust-leases/live-proof-latest.json) |
+| Live strategy-office proof | [`../xlayer-strategy-office/data/office/live-proof-latest.json`](../xlayer-strategy-office/data/office/live-proof-latest.json) |
 
 ### Quick links
 
 | Item | Link |
 |---|---|
+| Award plan | [docs/AWARD_PLAN.md](docs/AWARD_PLAN.md) |
 | Latest proof JSON | [examples/live-proof-latest.json](examples/live-proof-latest.json) |
 | Proof dashboard sample | [examples/proof-dashboard.sample.html](examples/proof-dashboard.sample.html) |
 | Submission page sample | [examples/submission.sample.html](examples/submission.sample.html) |
@@ -63,6 +86,15 @@ This project is the missing middle between:
 | Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Deployment runbook | [docs/DEPLOYMENT_RUNBOOK.md](docs/DEPLOYMENT_RUNBOOK.md) |
 | OpenClaw runbook | [docs/OPENCLAW_RUNBOOK.md](docs/OPENCLAW_RUNBOOK.md) |
+
+## Scorecard
+
+| Judging dimension | What this repo shows |
+|---|---|
+| OnchainOS / Uniswap integration and innovation | Reuses the live OnchainOS-backed X Layer execution path from `xlayer-strategy-office`, then inserts a lease gate before broadcast. |
+| X Layer ecosystem integration | Dedicated X Layer controller contract, X Layer wallet scope, X Layer tx proof, and X Layer receipt anchoring. |
+| AI interactive experience | Human issues bounded authority, agent requests execution, system evaluates policy, then surfaces approve / resize / block / review in the web app. |
+| Product completeness | Web dashboard, proof page, operator console, runtime scripts, local artifacts, contract subproject, deploy script, and runbooks are all in this repo. |
 
 ## Why This Project Exists
 
@@ -107,6 +139,59 @@ It is temporary operating authority.
 | Receipt layer | Every round writes a receipt with spend, tx hash, and note | [examples/latest-receipt.sample.json](examples/latest-receipt.sample.json) |
 | UI surface | Judges can inspect the same proof through a dashboard and submission page | [examples/proof-dashboard.sample.html](examples/proof-dashboard.sample.html) |
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Human["Human operator"] --> Web["Next.js web app"]
+    Web --> Control["Operator Console"]
+    Control --> Runtime["Trust lease runtime"]
+    Runtime --> Lease["Lease policy engine"]
+    Runtime --> OnchainOS["OnchainOS execution path"]
+    Lease --> Controller["X Layer TrustLeaseController"]
+    Runtime --> Artifacts["Proof packets / receipts / submission HTML"]
+    OnchainOS --> XLayer["X Layer execution"]
+    Runtime --> Controller
+    Controller --> Web
+    Artifacts --> Web
+```
+
+## Runtime Sequence
+
+```mermaid
+sequenceDiagram
+    participant H as Human
+    participant W as Web App
+    participant R as Trust Lease Runtime
+    participant C as TrustLeaseController
+    participant X as X Layer / OnchainOS
+
+    H->>W: Issue lease / set posture
+    W->>R: Trigger action
+    R->>C: Mirror lease or operator state
+    H->>W: Run governed round
+    W->>R: Start round
+    R->>R: Build request + evaluate lease checks
+    alt request allowed
+        R->>X: Execute via OnchainOS path
+        X-->>R: tx hash / receipt
+        R->>C: Anchor latest receipt
+    else request blocked or review
+        R->>C: Anchor blocked or review receipt
+    end
+    R->>W: Refresh proof surface
+```
+
+## What Makes It Different
+
+| Typical agent wallet flow | Trust Leases |
+|---|---|
+| Agent gets broad wallet access | Agent gets a bounded lease |
+| Review happens after execution | Governance happens before broadcast |
+| Dashboard is read-only | Web app can issue, pause, review, resume, revoke, and run |
+| Proof is mostly screenshots or logs | Proof packets, receipts, tx hashes, and contract anchors coexist |
+| Chain only sees the final swap | Chain can also see lease state, operator posture, and receipt anchor |
+
 ## What Is Reused
 
 This repo deliberately reuses working components from existing live X Layer projects in this workspace:
@@ -115,6 +200,7 @@ This repo deliberately reuses working components from existing live X Layer proj
   - OnchainOS CLI integration
   - wallet balance and quote parsing
   - live swap execution path
+  - real trust-lease gating before broadcast
   - proof dashboard and submission surface pattern
 - `xlayer-agent-control-tower`
   - operator posture model
@@ -127,14 +213,64 @@ This is copy-heavy on purpose. The goal is speed plus reliability, not novelty f
 
 ```text
 issue lease
--> read treasury
--> derive candidate request
--> check lease envelope
--> approve / resize / block / human_approval
+-> run strategy-office round
+-> strategy-office derives request
+-> trust lease checks scope and budget
+-> strategy-office quorum continues only if lease allows it
 -> optional live X Layer execution
--> write receipt
--> render proof dashboard + submission surface
+-> strategy-office writes its own proof
+-> trust-leases writes the lease packet for the same round
 ```
+
+## Web Operator Surface
+
+The Next.js app is no longer a read-only proof viewer.
+
+The dashboard and proof routes now include an in-app Operator Console that can:
+- issue a lease
+- pause operator posture
+- move into human review posture
+- resume active posture
+- revoke the active lease
+- run a governed round
+- refresh visible proof artifacts
+
+That means the core governance loop is now visible and operable inside the product shell instead of requiring the judge or operator to manually switch to CLI just to demonstrate control.
+
+## X Layer Controller Mode
+
+The project now supports a contract-driven operating mode.
+
+In this mode:
+- the Next.js app still provides the web surface
+- the live runtime still produces full proof packets and receipts
+- lease state, operator posture, and latest receipt anchors can be mirrored into an X Layer controller contract
+- the dashboard can read that controller state back and merge it into the current lease/operator surface
+
+The contract subproject lives in `contracts/` and compiles independently from the main Next.js app.
+
+Primary commands:
+
+```bash
+npm run contracts:compile
+npm run contracts:deploy:testnet
+npm run contracts:deploy:mainnet
+```
+
+To enable controller sync, set these in `.env.local`:
+
+```bash
+LEASE_CHAIN_SYNC_ENABLED=true
+LEASE_CONTROLLER_ADDRESS=0x...
+LEASE_CONTROLLER_WRITER_PRIVATE_KEY=0x...
+LEASE_CONTROLLER_ARTIFACT_BASE_URI=https://your-proof-host.example/trust-leases
+```
+
+Once configured:
+- `lease:issue` will issue the local lease file and mirror it onchain
+- `operator:*` commands will mirror operator posture onchain
+- `round:live` will anchor the latest receipt and proof hash onchain
+- the app will read active lease, operator mode, and latest anchored receipt from X Layer when available
 
 ## Repository Layout
 
@@ -150,6 +286,9 @@ scripts/
   preflight:treasury
   live-round.ts
   render-proof.ts
+contracts/
+  contracts/TrustLeaseController.sol
+  scripts/deploy.ts
 examples/
   active-lease.sample.json
   latest-receipt.sample.json
@@ -188,6 +327,7 @@ npm run demo:serve
 - [Demo Video Script](docs/DEMO_VIDEO_SCRIPT.md)
 - [Submission Form Answers](docs/SUBMISSION_FORM_ANSWERS.md)
 - [Reference Repos](docs/REFERENCE_REPOS.md)
+- [Contract Runbook](docs/CONTRACT_RUNBOOK.md)
 
 ## What Submission Review Should Notice
 
@@ -204,10 +344,12 @@ What is already implemented:
 - pre-execution checks
 - receipt writing
 - proof site generation
+- `strategy-office` bridge into the trust lease gate
 - reuse of live X Layer execution path
+- X Layer controller contract for lease state, operator posture, and receipt anchors
+- onchain-aware dashboard merge for lease/operator/receipt state
 
 What still improves the project further:
-- contract-native lease enforcement on X Layer
 - multi-agent countersigning like Chorus
 - trust score / endorsement layer like Universal Trust
 - escrow settlement path for mandate-style work

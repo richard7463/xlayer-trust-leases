@@ -11,6 +11,7 @@ import { evaluateLeaseRequest, issueLeaseFromEnv } from "../lease/policy.js";
 import { appendReceipt, listReceipts, readActiveLease, writeActiveLease } from "../lease/store.js";
 import { readOperatorState } from "./operator-state.js";
 import { buildLiveTreasurySnapshot, buildSampleTreasurySnapshot, getSettlementAccountAddress } from "../treasury/xlayer.js";
+import { controllerConfigFromRuntimeEnv, hasControllerAddress, readOnchainActiveLease, readOnchainOperator } from "../../lib/trust-lease-controller.js";
 
 export class TrustLeaseAgent {
   readonly client: OnchainOsCliClient;
@@ -31,6 +32,57 @@ export class TrustLeaseAgent {
 
   private baseDir(): string {
     return path.resolve(this.env.LEASE_DATA_DIR);
+  }
+
+  private controllerConfig() {
+    return controllerConfigFromRuntimeEnv(this.env);
+  }
+
+  private async mergeLeaseFromChain(localLease: LeasePolicy | null, walletAddress?: string): Promise<LeasePolicy | null> {
+    const controllerConfig = this.controllerConfig();
+    if (!hasControllerAddress(controllerConfig)) {
+      return localLease;
+    }
+
+    const onchainLease = await readOnchainActiveLease(controllerConfig, this.env.LEASE_CONSUMER_NAME);
+    if (!onchainLease) {
+      return localLease;
+    }
+
+    const base = localLease ?? issueLeaseFromEnv(this.env, onchainLease.wallet || walletAddress);
+    return {
+      ...base,
+      leaseId: onchainLease.leaseId,
+      consumerName: onchainLease.consumerName,
+      walletAddress: onchainLease.wallet,
+      baseAsset: onchainLease.baseAsset,
+      issuedAt: onchainLease.issuedAt,
+      expiresAt: onchainLease.expiresAt,
+      status: onchainLease.status,
+      perTxUsd: onchainLease.perTxUsd,
+      dailyBudgetUsd: onchainLease.dailyBudgetUsd
+    };
+  }
+
+  private async resolveOperatorState() {
+    const localOperator = readOperatorState(this.baseDir(), this.env.LEASE_OPERATOR_NAME);
+    const controllerConfig = this.controllerConfig();
+    if (!hasControllerAddress(controllerConfig)) {
+      return localOperator;
+    }
+
+    const onchainOperator = await readOnchainOperator(controllerConfig, this.env.LEASE_OPERATOR_NAME);
+    if (!onchainOperator) {
+      return localOperator;
+    }
+
+    return {
+      ...localOperator,
+      operatorName: onchainOperator.operatorName,
+      mode: onchainOperator.mode === "none" ? localOperator.mode : onchainOperator.mode,
+      updatedAt: onchainOperator.updatedAt ?? localOperator.updatedAt,
+      note: onchainOperator.noteHash !== "0x0000000000000000000000000000000000000000000000000000000000000000" ? onchainOperator.noteHash : localOperator.note
+    };
   }
 
   private async resolveOverview(): Promise<{ overview: PortfolioOverview; source: "onchainos" | "xlayer" | "sample" }> {
@@ -76,10 +128,37 @@ export class TrustLeaseAgent {
     };
   }
 
-  private ensureLease(walletAddress?: string): LeasePolicy {
+  private async ensureLease(walletAddress?: string): Promise<LeasePolicy> {
     const baseDir = this.baseDir();
     const existing = readActiveLease(baseDir);
-    if (existing && existing.status === "active" && new Date(existing.expiresAt).getTime() > Date.now()) {
+    const mergedExisting = await this.mergeLeaseFromChain(existing, walletAddress);
+    if (mergedExisting) {
+      writeActiveLease(baseDir, mergedExisting);
+      if (mergedExisting.status === "active") {
+        const expiresAt = new Date(mergedExisting.expiresAt).getTime();
+        if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+          const expiredLease: LeasePolicy = {
+            ...mergedExisting,
+            status: "expired"
+          };
+          writeActiveLease(baseDir, expiredLease);
+          return expiredLease;
+        }
+      }
+      return mergedExisting;
+    }
+
+    if (existing) {
+      const expiresAt = new Date(existing.expiresAt).getTime();
+      if (existing.status === "active" && Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+        const expiredLease: LeasePolicy = {
+          ...existing,
+          status: "expired"
+        };
+        writeActiveLease(baseDir, expiredLease);
+        return expiredLease;
+      }
+
       return existing;
     }
 
@@ -88,7 +167,20 @@ export class TrustLeaseAgent {
     return lease;
   }
 
-  private usageWindow(leaseId: string): LeaseUsageWindow {
+  private async usageWindow(leaseId: string): Promise<LeaseUsageWindow> {
+    const controllerConfig = this.controllerConfig();
+    if (hasControllerAddress(controllerConfig)) {
+      const onchainLease = await readOnchainActiveLease(controllerConfig, this.env.LEASE_CONSUMER_NAME);
+      if (onchainLease?.leaseId === leaseId) {
+        return {
+          startedAt: onchainLease.spentWindowStartedAt ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          spent24hUsd: onchainLease.spentTodayUsd,
+          remainingDailyUsd: onchainLease.remainingDailyUsd,
+          receiptCount24h: 0
+        };
+      }
+    }
+
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     const receipts = listReceipts(this.baseDir()).filter((receipt) => receipt.leaseId === leaseId && new Date(receipt.generatedAt).getTime() >= cutoff);
     const spent24hUsd = receipts
@@ -186,13 +278,13 @@ export class TrustLeaseAgent {
 
   async runTick(): Promise<{ packet: ProofPacket; source: "onchainos" | "xlayer" | "sample"; candidate: TradeCandidate | null; lease: LeasePolicy; }> {
     const baseDir = this.baseDir();
-    const operator = readOperatorState(baseDir, this.env.LEASE_OPERATOR_NAME);
+    const operator = await this.resolveOperatorState();
     const { overview, source } = await this.resolveOverview();
-    const lease = this.ensureLease(overview.walletAddress);
+    const lease = await this.ensureLease(overview.walletAddress);
     const treasury = this.portfolio.toTreasurySnapshot(overview);
     const candidate = this.portfolio.buildTradeCandidate(overview, parseAllocations(this.env.LEASE_TARGET_ALLOCATIONS));
     const request = this.buildRequest(lease, candidate);
-    const usage = this.usageWindow(lease.leaseId);
+    const usage = await this.usageWindow(lease.leaseId);
     const quote = candidate
       ? source === "onchainos"
         ? await this.portfolio.quoteCandidate(candidate)

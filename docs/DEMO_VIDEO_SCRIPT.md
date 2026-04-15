@@ -15,6 +15,7 @@ Show the README header or submission page hero.
 Run:
 
 ```bash
+cd /Users/yanqing/Documents/GitHub/miraix-interface/projects/xlayer-trust-leases
 npm run lease:issue
 ```
 
@@ -39,32 +40,34 @@ Narration:
 Run:
 
 ```bash
+cd /Users/yanqing/Documents/GitHub/miraix-interface/projects/xlayer-strategy-office
 npm run round:live
 ```
 
 Narration:
 
-"The agent submits a request. The lease checks wallet scope, asset allowlist, protocol allowlist, counterparty allowlist, price impact, and budget. Only then does live X Layer execution proceed."
+"The strategy-office agent submits a real request. The trust lease checks wallet scope, asset allowlist, protocol allowlist, counterparty allowlist, price impact, budget, and expiry. Only then can live X Layer execution proceed."
 
 If a tx is broadcasted, point at the tx hash and explorer URL.
+If the lease is expired or paused, point at the blocked decision and explain that no broadcast happened.
 
 ## Shot 5 - Proof surface
 
 Run:
 
 ```bash
-npm run status:latest
-npm run demo:serve
+cd /Users/yanqing/Documents/GitHub/miraix-interface/projects/xlayer-trust-leases
+npm run dev -- --port 3000
 ```
 
 Open:
 
-- `http://127.0.0.1:4312/submission.html`
-- `http://127.0.0.1:4312/proof-dashboard.html`
+- `http://127.0.0.1:3000/submission`
+- `http://127.0.0.1:3000/proof`
 
 Narration:
 
-"Every lease round writes a receipt and a proof packet. Judges can inspect the lease envelope, request, decision, and onchain result in one place."
+"Every strategy-office round that passes through the lease writes a receipt and a proof packet back into Trust Leases. Judges can inspect the lease envelope, request, decision, and onchain result in one place."
 
 ## Closing line
 

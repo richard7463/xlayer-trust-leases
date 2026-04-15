@@ -11,9 +11,9 @@
 npm install
 npm run lease:issue
 npm run preflight:treasury
+cd ../xlayer-strategy-office
+npm install
 npm run round:live
-npm run proof:render
-npm run demo:serve
 ```
 
 ## Server / OpenClaw
@@ -21,9 +21,10 @@ npm run demo:serve
 - do not set proxy
 - keep `LEASE_EXECUTION_MODE=live`
 - reuse the same Agentic Wallet login or settlement key path already working on the server
-- schedule `npm run round:live && npm run proof:render`
+- schedule `cd /opt/xlayer-strategy-office && npm run round:live`
 
 ## Submission surfaces
 
-- `http://127.0.0.1:4312/submission.html`
-- `http://127.0.0.1:4312/proof-dashboard.html`
+- run the Next app in `xlayer-trust-leases`
+- open `http://127.0.0.1:3000/submission`
+- open `http://127.0.0.1:3000/proof`

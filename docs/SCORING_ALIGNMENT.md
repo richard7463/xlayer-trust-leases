@@ -5,6 +5,7 @@
 - OnchainOS wallet balance lookup
 - OnchainOS route quote
 - OnchainOS swap execution reuse from the live strategy-office path
+- the same strategy-office round is now blocked or resized by the trust lease before execution proceeds
 - X Layer explorer-linked receipts
 
 ## X Layer ecosystem integration
@@ -22,6 +23,7 @@
 ## Product completeness
 
 - lease issuance
+- strategy-office bridge into trust-lease evaluation
 - latest proof packet
 - receipt log
 - submission page

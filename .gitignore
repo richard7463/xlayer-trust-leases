@@ -1,7 +1,16 @@
 node_modules
+contracts/node_modules
 dist
 .env
 .env.local
 *.log
 data/
 upstream/
+.vercel
+.next
+tsconfig.tsbuildinfo
+contracts/artifacts
+contracts/cache
+contracts/typechain-types
+contracts/.hardhat-home
+contracts/.hardhat-config
