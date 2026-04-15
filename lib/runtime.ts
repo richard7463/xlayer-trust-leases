@@ -13,7 +13,7 @@ export function isLeaseExpired(expiresAt?: string): boolean {
 
 export function deriveLeaseState(
   lease: ProofPacket['lease'] | null,
-  operatorMode?: string
+  _operatorMode?: string
 ): { label: string; tone: Tone } {
   if (!lease) {
     return { label: 'Not Issued', tone: 'fail' };
@@ -25,14 +25,6 @@ export function deriveLeaseState(
 
   if (isLeaseExpired(lease.expiresAt)) {
     return { label: 'Expired', tone: 'fail' };
-  }
-
-  if (operatorMode === 'paused') {
-    return { label: 'Paused', tone: 'warn' };
-  }
-
-  if (operatorMode === 'review') {
-    return { label: 'Review', tone: 'warn' };
   }
 
   return { label: 'Active', tone: 'ok' };
