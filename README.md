@@ -7,7 +7,7 @@
 ![Mode](https://img.shields.io/badge/Mode-Web%20App%20%2B%20X%20Layer%20Controller-4f46e5)
 ![Control](https://img.shields.io/badge/Control-Issue%20%7C%20Pause%20%7C%20Review%20%7C%20Resume%20%7C%20Revoke-065f46)
 
-A safer way to let an AI agent trade on X Layer without giving it your whole wallet.
+The safe way to give agents real money on X Layer.
 
 X Layer Trust Leases is a product for one simple problem:
 
