@@ -142,6 +142,9 @@ export function SubmissionPage({
               <li>Issue rule to X Layer contract.</li>
               <li>Watch every request become approve, resize, or block with proof.</li>
             </ol>
+            <div className="scope-note">
+              Scope note: these limits apply to agent requests executed through Boundless runtime/controller. Direct wallet transfers outside this flow are not blocked.
+            </div>
           </div>
 
           <div className="card">
