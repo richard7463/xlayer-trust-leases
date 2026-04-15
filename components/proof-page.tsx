@@ -105,10 +105,37 @@ export function ProofPage({ packet, lease, currentOperator, rounds, latestSucces
         latestBlockedReason={latestBlockedPacket?.decision.rationale}
         controllerAddress={controller.address}
         controllerSource={controller.source}
+        governedWallet={liveLease?.walletAddress}
         actionsEnabled={controller.actionsEnabled}
         runRoundEnabled={controller.runRoundEnabled}
         controllerNote={controller.note}
       />
+
+      <div className="card">
+        <h2>Onchain Controller State</h2>
+        <p>
+          This is where the chain work shows up in the product: the dashboard reads the active lease, operator posture,
+          and latest receipt anchor from the X Layer controller before falling back to bundled proof data.
+        </p>
+        <div className="info-grid">
+          <div className="info-card">
+            <div className="k">Controller</div>
+            <div className="v mono">{shortHash(controller.address ?? undefined)}</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Source</div>
+            <div className="v">{titleCase(controller.source)}</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Latest Request</div>
+            <div className="v mono">{shortHash(controller.latestRequestId ?? undefined)}</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Latest Tx</div>
+            <div className="v mono">{shortHash(controller.latestTxHash ?? undefined)}</div>
+          </div>
+        </div>
+      </div>
 
       <div className="grid-2">
         <div className="card">

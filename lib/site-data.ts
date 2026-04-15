@@ -311,12 +311,25 @@ export async function getSiteData(options: SiteDataOptions = {}): Promise<SiteDa
   const runtimeEnv = readRuntimeEnv(loadedEnv);
   const controllerConfig = readControllerConfig(loadedEnv);
   const controllerWritable = canWriteController(controllerConfig);
-  const onchainLease = controllerConfig.controllerAddress ? await readOnchainActiveLease(controllerConfig) : null;
-  const onchainOperator = controllerConfig.controllerAddress ? await readOnchainOperator(controllerConfig) : null;
-  const onchainReceipt = controllerConfig.controllerAddress ? await readOnchainLatestReceipt(controllerConfig) : null;
-  const onchainReceipts = controllerConfig.controllerAddress
-    ? await readRecentOnchainReceipts(controllerConfig, { limit: 12 })
-    : [];
+  let onchainLease: Awaited<ReturnType<typeof readOnchainActiveLease>> = null;
+  let onchainOperator: Awaited<ReturnType<typeof readOnchainOperator>> = null;
+  let onchainReceipt: Awaited<ReturnType<typeof readOnchainLatestReceipt>> = null;
+  let onchainReceipts: OnchainReceiptEvent[] = [];
+  let controllerReadError: string | null = null;
+
+  if (controllerConfig.controllerAddress) {
+    try {
+      [onchainLease, onchainOperator, onchainReceipt, onchainReceipts] = await Promise.all([
+        readOnchainActiveLease(controllerConfig),
+        readOnchainOperator(controllerConfig),
+        readOnchainLatestReceipt(controllerConfig),
+        readRecentOnchainReceipts(controllerConfig, { limit: 12 }),
+      ]);
+    } catch (error) {
+      controllerReadError = error instanceof Error ? error.message : 'Unknown controller read error.';
+      console.error('[trust-leases] controller read fallback', controllerReadError);
+    }
+  }
   const mergedRounds = dedupeRounds([...rounds, ...onchainReceipts.map(buildSyntheticRoundFromReceipt)]);
   const requestedPacket = clonePacket(resolveRequestedPacket(mergedRounds, options.requestId));
   let packet = requestedPacket ?? clonePacket(resolvePrimaryPacket(mergedRounds));
@@ -435,10 +448,14 @@ export async function getSiteData(options: SiteDataOptions = {}): Promise<SiteDa
       actionsEnabled: hostedRuntime ? controllerWritable : true,
       runRoundEnabled: !hostedRuntime,
       note: hostedRuntime
-        ? controllerWritable
-          ? 'Hosted deployment can issue, revoke, and change operator posture directly on X Layer. Live round execution still requires a writable runner.'
-          : 'Hosted deployment is read-only. Control actions require a configured X Layer controller writer or a writable runner.'
-        : null,
+        ? controllerReadError
+          ? `Controller reads temporarily unavailable. Falling back to bundled proof data. ${controllerReadError}`
+          : controllerWritable
+            ? 'Hosted deployment can issue, revoke, and change operator posture directly on X Layer. Live round execution still requires a writable runner.'
+            : 'Hosted deployment is read-only. Control actions require a configured X Layer controller writer or a writable runner.'
+        : controllerReadError
+          ? `Controller read fallback: ${controllerReadError}`
+          : null,
     },
   };
 }

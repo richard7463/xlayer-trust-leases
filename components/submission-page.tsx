@@ -144,6 +144,60 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
         </div>
       </div>
 
+      <div className="grid-2">
+        <div className="card">
+          <h2>How Wallet Control Works</h2>
+          <p>
+            The user does not hand an agent full wallet control. The user chooses a governed wallet, issues a temporary lease,
+            and the agent can only act if its request fits that lease.
+          </p>
+          <div className="info-grid">
+            <div className="info-card">
+              <div className="k">1. Governed Wallet</div>
+              <div className="v mono">{shortHash(liveLease?.walletAddress)}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">2. Lease Boundary</div>
+              <div className="v">{formatUsd(liveLease?.perTxUsd ?? 0)} per action</div>
+            </div>
+            <div className="info-card">
+              <div className="k">3. Agent Request</div>
+              <div className="v">{packet ? `${packet.request.fromToken} -> ${packet.request.toToken}` : 'Waiting for request'}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">4. Receipt</div>
+              <div className="v mono">{shortHash(controller.latestTxHash ?? latestSuccessRound?.txHash)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>X Layer Controller Evidence</h2>
+          <p>
+            The contract is the public state layer: it stores active lease state, operator posture, and the latest receipt anchor.
+            The web app reads this state before rendering the dashboard.
+          </p>
+          <div className="info-grid">
+            <div className="info-card">
+              <div className="k">Controller</div>
+              <div className="v mono">{shortHash(controller.address ?? undefined)}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">State Source</div>
+              <div className="v">{titleCase(controller.source)}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">Latest Request</div>
+              <div className="v mono">{shortHash(controller.latestRequestId ?? undefined)}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">Hosted Writes</div>
+              <div className="v">{controller.actionsEnabled ? 'Enabled' : 'Read only'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <OperatorConsole
         leaseId={liveLease?.leaseId}
         leaseStatus={liveLease?.status}
@@ -152,6 +206,7 @@ export function SubmissionPage({ packet, lease, currentOperator, rounds, latestS
         latestBlockedReason={latestBlockedPacket?.decision.rationale}
         controllerAddress={controller.address}
         controllerSource={controller.source}
+        governedWallet={liveLease?.walletAddress}
         actionsEnabled={controller.actionsEnabled}
         runRoundEnabled={controller.runRoundEnabled}
         controllerNote={controller.note}

@@ -51,6 +51,41 @@ This project is the missing middle between:
 - giving an agent a full wallet
 - manually approving every action
 
+## How a User Manages a Wallet
+
+Trust Leases does not ask a user to give an agent unlimited wallet access.
+
+The user flow is:
+
+1. choose a governed wallet address
+2. issue a lease that defines budget, assets, protocols, counterparties, and expiry
+3. let the agent submit an execution request
+4. approve, resize, block, pause, resume, or revoke from the dashboard
+5. inspect the receipt and controller anchor after execution
+
+In the current Build X deployment, the governed wallet is the live X Layer agent wallet used by the strategy-office runtime:
+
+`0xdbc8e35ea466f85d57c0cc1517a81199b8549f04`
+
+The public app now shows this explicitly in the Operator Console as `Governed wallet`. Issuing a lease writes the chosen wallet into the X Layer controller.
+
+## Where the Contract Shows Up
+
+The X Layer controller is not hidden backend plumbing. It appears in the web app in three places:
+
+- `Dashboard -> X Layer Controller Evidence`
+- `Proof -> Onchain Controller State`
+- `Operator Console -> Controller: X Layer <address>`
+
+The controller stores:
+
+- active lease state
+- operator mode
+- latest receipt anchor
+- daily budget accounting
+
+The full proof packet still stays offchain because it is high-density JSON, but the receipt hash and execution tx are anchored through the controller.
+
 It now runs as a hybrid product:
 - a real web app for operators
 - a live execution bridge into `xlayer-strategy-office`

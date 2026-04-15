@@ -11,6 +11,7 @@ type OperatorConsoleProps = {
   latestBlockedReason?: string | null;
   controllerAddress?: string | null;
   controllerSource?: 'local' | 'onchain';
+  governedWallet?: string | null;
   actionsEnabled?: boolean;
   runRoundEnabled?: boolean;
   controllerNote?: string | null;
@@ -54,12 +55,14 @@ export function OperatorConsole({
   latestBlockedReason,
   controllerAddress,
   controllerSource,
+  governedWallet,
   actionsEnabled = true,
   runRoundEnabled = true,
   controllerNote,
 }: OperatorConsoleProps) {
   const router = useRouter();
   const [note, setNote] = useState('');
+  const [walletAddress, setWalletAddress] = useState(governedWallet ?? '');
   const [busyAction, setBusyAction] = useState<ControlAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +87,7 @@ export function OperatorConsole({
       const response = await fetch('/api/control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, note }),
+        body: JSON.stringify({ action, note, walletAddress }),
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok) {
@@ -125,6 +128,17 @@ export function OperatorConsole({
           onChange={(event) => setNote(event.target.value)}
           placeholder="optional reason, pause note, or lease note"
           className="note-input"
+        />
+      </div>
+
+      <div className="note-row">
+        <label htmlFor="governed-wallet" className="note-label">Governed wallet</label>
+        <input
+          id="governed-wallet"
+          value={walletAddress}
+          onChange={(event) => setWalletAddress(event.target.value)}
+          placeholder="0x wallet that the agent is allowed to operate inside"
+          className="note-input mono"
         />
       </div>
 

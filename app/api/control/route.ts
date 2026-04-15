@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
+import { isAddress } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { getSiteData, writeCanonicalLatestIfNeeded } from '@/lib/site-data';
 import { canWriteController, issueLeaseOnchain, readControllerConfig, readOnchainActiveLease, setLeaseStatusOnchain, setOperatorModeOnchain } from '@/lib/trust-lease-controller';
@@ -63,7 +64,7 @@ function buildHostedLease(env: ReturnType<typeof readRuntimeEnv>, walletAddress:
   };
 }
 
-async function runHostedControlAction(action: ControlAction, note?: string) {
+async function runHostedControlAction(action: ControlAction, note?: string, requestedWalletAddress?: string) {
   const env = readRuntimeEnv(process.env);
   const controllerConfig = readControllerConfig(process.env);
 
@@ -77,7 +78,9 @@ async function runHostedControlAction(action: ControlAction, note?: string) {
       if (activeLease?.status === 'active') {
         await setLeaseStatusOnchain(controllerConfig, activeLease.leaseId, 'revoked', 'superseded by new hosted lease');
       }
-      const walletAddress = env.XLAYER_TREASURY_ADDRESS || getHostedSettlementAddress(env);
+      const walletAddress = requestedWalletAddress && isAddress(requestedWalletAddress)
+        ? requestedWalletAddress
+        : env.XLAYER_TREASURY_ADDRESS || getHostedSettlementAddress(env);
       if (!walletAddress) {
         throw new Error('Missing treasury wallet address for hosted lease issuance.');
       }
@@ -168,9 +171,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json().catch(() => ({}))) as { action?: ControlAction; note?: string };
+    const body = (await request.json().catch(() => ({}))) as { action?: ControlAction; note?: string; walletAddress?: string };
     const action = body.action;
     const note = body.note?.trim();
+    const walletAddress = body.walletAddress?.trim();
 
     if (!action) {
       return NextResponse.json({ ok: false, error: 'Missing action.' }, { status: 400 });
@@ -179,7 +183,7 @@ export async function POST(request: Request) {
     let output = '';
 
     if (isHostedReadonlyRuntime()) {
-      output = await runHostedControlAction(action, note);
+      output = await runHostedControlAction(action, note, walletAddress);
     } else {
       switch (action) {
         case 'issue-lease':

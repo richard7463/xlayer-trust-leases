@@ -20,7 +20,7 @@ type LandingPageProps = {
   };
 };
 
-export default function LandingPage({ packet, lease, currentOperator, rounds }: LandingPageProps) {
+export default function LandingPage({ packet, lease, currentOperator, rounds, controller }: LandingPageProps) {
   const liveLease = lease ?? packet?.lease ?? null;
   const leaseState = deriveLeaseState(liveLease, currentOperator?.mode ?? packet?.operator.mode);
   const remainingBudget = packet?.usage.remainingDailyUsd ?? liveLease?.dailyBudgetUsd ?? 0;
@@ -63,6 +63,52 @@ export default function LandingPage({ packet, lease, currentOperator, rounds }: 
           </Link>
         </div>
       </section>
+
+      <div className="grid-2">
+        <div className="card">
+          <h2>What the user actually does</h2>
+          <p>
+            The user picks a governed wallet, issues a lease with budget and route limits, then lets the agent submit requests.
+            The agent never gets unlimited wallet authority from this app.
+          </p>
+          <div className="info-grid">
+            <div className="info-card">
+              <div className="k">Governed Wallet</div>
+              <div className="v mono">{shortHash(liveLease?.walletAddress)}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">Lease Limit</div>
+              <div className="v">{formatUsd(liveLease?.perTxUsd ?? 0)} per request</div>
+            </div>
+            <div className="info-card">
+              <div className="k">Agent Result</div>
+              <div className="v">{packet ? titleCase(packet.decision.outcome) : 'No round yet'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>What is onchain</h2>
+          <p>
+            The X Layer controller records the active lease, operator mode, and latest receipt anchor.
+            That makes the guardrail visible outside the local proof files.
+          </p>
+          <div className="info-grid">
+            <div className="info-card">
+              <div className="k">Controller</div>
+              <div className="v mono">{shortHash(controller?.address ?? undefined)}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">Latest Request</div>
+              <div className="v mono">{shortHash(controller?.latestRequestId ?? undefined)}</div>
+            </div>
+            <div className="info-card">
+              <div className="k">Source</div>
+              <div className="v">{titleCase(controller?.source ?? 'local')}</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="stats-bar">
         <div className="stat-card">
