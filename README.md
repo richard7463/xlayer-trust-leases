@@ -33,6 +33,28 @@ In plain terms:
 This is not another tracking dashboard.
 It is a control layer for real agent execution on X Layer.
 
+## What This App Actually Does
+
+Today, Boundless has two operating modes:
+
+1. Controller mode (already live in app)
+- issue / revoke lease onchain
+- change operator posture (active / review / paused)
+- anchor receipts and decision proof
+- show approved and blocked evidence in the dashboard
+
+2. Hard-guard mode (new in this repo)
+- user funds are held in `BoundlessVault` contract
+- member wallets cannot move vault funds directly
+- owner sets per-member policy (`perTx + daily`) onchain
+- each execution must call `TrustLeaseController.enforceAndConsume` first
+- if per-tx or daily budget is exceeded, the call reverts onchain
+- only allowed member wallets + allowed assets + allowed protocol targets can execute
+
+Important boundary:
+- Controller mode governs requests that go through Boundless runtime.
+- Hard-guard mode is the version that gives strict onchain spend enforcement for vault funds.
+
 ## 30-Second Pitch
 
 Boundless lets a human give an agent limited, temporary permission to execute on X Layer.
@@ -253,6 +275,24 @@ sequenceDiagram
     end
     R->>W: Refresh proof surface
 ```
+
+## Automated Tests
+
+Run full hard-guard contract tests:
+
+```bash
+npm run contracts:test
+```
+
+Current automated coverage:
+- member execution succeeds inside both member and global budgets
+- member per-tx overflow reverts onchain
+- member daily overflow reverts onchain
+- non-member wallet is blocked
+- request replay (same request id) is blocked
+- operator `review` mode blocks execution
+- global controller per-tx cap blocks execution even if member budget allows it
+- protocol allowlist is enforced for `executeProtocolCall`
 
 ## What Makes It Different
 

@@ -401,6 +401,14 @@ td {
   font-size: 13px;
   border-bottom: 1px solid var(--border);
 }
+.history-summary-cell {
+  font-size: 11px;
+  color: var(--s1);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.45;
+}
 .mono {
   font-family: var(--mono);
   font-size: 12px;
@@ -902,6 +910,16 @@ td {
   outline: none;
   border-color: var(--lime);
 }
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--s1);
+}
+.checkbox-wrap input {
+  accent-color: var(--lime);
+}
 .connect-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1053,6 +1071,28 @@ td {
   font-size: 12px;
   line-height: 1.55;
 }
+.scope-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.scope-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--lime);
+}
+.scope-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--s1);
+  line-height: 1.5;
+}
+.scope-list li + li {
+  margin-top: 3px;
+}
 .stack-list {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1195,6 +1235,9 @@ td {
   }
   .activity-meta {
     flex-wrap: wrap;
+  }
+  .scope-grid {
+    grid-template-columns: 1fr;
   }
 }
 

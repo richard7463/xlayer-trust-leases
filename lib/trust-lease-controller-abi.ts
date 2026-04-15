@@ -40,6 +40,16 @@ export const trustLeaseControllerAbi = [
   },
   {
     type: 'function',
+    name: 'setExecutor',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'executor', type: 'address' },
+      { name: 'allowed', type: 'bool' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
     name: 'anchorReceipt',
     stateMutability: 'nonpayable',
     inputs: [
@@ -54,6 +64,20 @@ export const trustLeaseControllerAbi = [
       { name: 'artifactUri', type: 'string' },
     ],
     outputs: [{ name: '', type: 'bytes32' }],
+  },
+  {
+    type: 'function',
+    name: 'enforceAndConsume',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'leaseId', type: 'string' },
+      { name: 'requestId', type: 'string' },
+      { name: 'requestedUsd6', type: 'uint128' },
+    ],
+    outputs: [
+      { name: 'resolvedStatus', type: 'uint8' },
+      { name: 'remainingDailyUsd6', type: 'uint128' },
+    ],
   },
   {
     type: 'function',

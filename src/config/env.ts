@@ -18,6 +18,8 @@ const RuntimeEnvSchema = z.object({
   LEASE_CONTROLLER_ARTIFACT_BASE_URI: z.string().optional(),
   LEASE_CONTROLLER_DEPLOY_BLOCK: z.string().optional(),
   LEASE_PUBLIC_PROOF_URL: z.string().optional(),
+  BOUNDLESS_VAULT_ADDRESS: z.string().optional(),
+  BOUNDLESS_VAULT_WRITER_PRIVATE_KEY: z.string().optional(),
   LEASE_ENV: z.enum(["development", "staging", "production"]).default("development"),
   LEASE_NAME: z.string().default("xlayer-trust-leases"),
   LEASE_DATA_DIR: z.string().default("data/trust-leases"),

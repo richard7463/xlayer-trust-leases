@@ -80,9 +80,11 @@ contract TrustLeaseController {
     uint256 public totalBroadcastedReceipts;
     uint256 public totalBlockedReceipts;
 
+    mapping(address => bool) public authorizedExecutors;
     mapping(bytes32 => LeaseRecord) private leaseRecords;
     mapping(bytes32 => OperatorRecord) private operatorRecords;
     mapping(bytes32 => ReceiptAnchor) private receiptAnchors;
+    mapping(bytes32 => uint128) public consumedSpendUsd6ByRequest;
     mapping(bytes32 => bytes32) public activeLeaseKeyByConsumer;
     mapping(bytes32 => bytes32) public latestReceiptKeyByConsumer;
 
@@ -91,9 +93,16 @@ contract TrustLeaseController {
     event LeaseStatusChanged(bytes32 indexed leaseKey, string leaseId, uint8 status, bytes32 noteHash, uint64 changedAt);
     event OperatorModeChanged(bytes32 indexed operatorKey, string operatorName, uint8 mode, bytes32 noteHash, uint64 changedAt);
     event ReceiptAnchored(bytes32 indexed requestKey, bytes32 indexed consumerKey, string leaseId, string requestId, uint8 outcome, uint8 executionStatus, uint128 spentUsd6, bytes32 txHash, bytes32 proofHash);
+    event ExecutorAuthorizationUpdated(address indexed executor, bool allowed);
+    event LeaseBudgetConsumed(bytes32 indexed leaseKey, bytes32 indexed requestKey, string leaseId, string requestId, uint128 spentUsd6, uint128 remainingDailyUsd6);
 
     modifier onlyOwner() {
         require(msg.sender == owner, 'Only owner');
+        _;
+    }
+
+    modifier onlyAuthorizedExecutor() {
+        require(authorizedExecutors[msg.sender], 'Executor not authorized');
         _;
     }
 
@@ -106,6 +115,12 @@ contract TrustLeaseController {
         require(newOwner != address(0), 'Zero address');
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
+    }
+
+    function setExecutor(address executor, bool allowed) external onlyOwner {
+        require(executor != address(0), 'Zero executor');
+        authorizedExecutors[executor] = allowed;
+        emit ExecutorAuthorizationUpdated(executor, allowed);
     }
 
     function leaseKey(string memory leaseId) public pure returns (bytes32) {
@@ -230,9 +245,15 @@ contract TrustLeaseController {
         _refreshUsageWindow(lease);
 
         if (executionStatus == ExecutionStatus.Broadcasted && spentUsd6 > 0) {
-            require(spentUsd6 <= lease.perTxUsd6, 'per-tx exceeded');
-            require(spentUsd6 <= _remainingDailyBudget(lease), 'daily budget exceeded');
-            lease.spentTodayUsd6 += spentUsd6;
+            bytes32 reqKey = requestKey(requestId);
+            uint128 preConsumedUsd6 = consumedSpendUsd6ByRequest[reqKey];
+            if (preConsumedUsd6 > 0) {
+                require(spentUsd6 == preConsumedUsd6, 'spent mismatch');
+            } else {
+                require(spentUsd6 <= lease.perTxUsd6, 'per-tx exceeded');
+                require(spentUsd6 <= _remainingDailyBudget(lease), 'daily budget exceeded');
+                lease.spentTodayUsd6 += spentUsd6;
+            }
             totalBroadcastedReceipts += 1;
         }
 
@@ -260,6 +281,39 @@ contract TrustLeaseController {
 
         emit ReceiptAnchored(rKey, cKey, leaseId, requestId, uint8(outcome), uint8(executionStatus), spentUsd6, txHash, proofHash);
         return rKey;
+    }
+
+    function enforceAndConsume(
+        string calldata leaseId,
+        string calldata requestId,
+        uint128 requestedUsd6
+    ) external onlyAuthorizedExecutor returns (uint8 resolvedStatus, uint128 remainingDailyUsd6) {
+        require(bytes(requestId).length > 0, 'request required');
+        require(requestedUsd6 > 0, 'requested required');
+
+        bytes32 lKey = leaseKey(leaseId);
+        LeaseRecord storage lease = leaseRecords[lKey];
+        require(lease.exists, 'unknown lease');
+
+        bytes32 rKey = requestKey(requestId);
+        require(consumedSpendUsd6ByRequest[rKey] == 0, 'request consumed');
+
+        _refreshUsageWindow(lease);
+
+        LeaseStatus status = _resolvedLeaseStatus(lease);
+        require(status == LeaseStatus.Active, 'lease inactive');
+        require(requestedUsd6 <= lease.perTxUsd6, 'per-tx exceeded');
+
+        uint128 remaining = _remainingDailyBudget(lease);
+        require(requestedUsd6 <= remaining, 'daily budget exceeded');
+
+        lease.spentTodayUsd6 += requestedUsd6;
+        uint128 remainingAfter = lease.dailyBudgetUsd6 - lease.spentTodayUsd6;
+        consumedSpendUsd6ByRequest[rKey] = requestedUsd6;
+
+        emit LeaseBudgetConsumed(lKey, rKey, leaseId, requestId, requestedUsd6, remainingAfter);
+
+        return (uint8(status), remainingAfter);
     }
 
     function canExecute(string calldata leaseId, uint128 requestedUsd6) external view returns (bool allowed, uint8 resolvedStatus, uint128 remainingDailyUsd6) {

@@ -24,8 +24,11 @@
     "demo:serve": "node --import tsx scripts/serve-demo.ts",
     "lease:revoke": "node --import tsx scripts/revoke-lease.ts",
     "contracts:compile": "npm --prefix contracts run compile",
+    "contracts:test": "npm --prefix contracts run test",
     "contracts:deploy:testnet": "npm --prefix contracts run deploy:testnet",
-    "contracts:deploy:mainnet": "npm --prefix contracts run deploy:mainnet"
+    "contracts:deploy:mainnet": "npm --prefix contracts run deploy:mainnet",
+    "contracts:deploy:guard:testnet": "npm --prefix contracts run deploy:guard:testnet",
+    "contracts:deploy:guard:mainnet": "npm --prefix contracts run deploy:guard:mainnet"
   },
   "dependencies": {
     "next": "^16.2.3",

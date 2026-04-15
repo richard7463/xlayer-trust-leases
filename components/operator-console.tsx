@@ -24,7 +24,15 @@ type OperatorConsoleProps = {
   controllerNote?: string | null;
 };
 
-type ControlAction = 'issue-lease' | 'revoke-lease' | 'pause' | 'review' | 'resume' | 'run-round' | 'refresh-proof';
+type ControlAction =
+  | 'issue-lease'
+  | 'revoke-lease'
+  | 'pause'
+  | 'review'
+  | 'resume'
+  | 'run-round'
+  | 'refresh-proof'
+  | 'set-member-policy';
 
 const ACTION_GROUPS: Array<{
   label: string;
@@ -88,6 +96,10 @@ export function OperatorConsole({
   const [expiryHoursInput, setExpiryHoursInput] = useState('24');
   const [allowedAssetsInput, setAllowedAssetsInput] = useState((allowedAssets && allowedAssets.length > 0 ? allowedAssets : ['USDT0', 'USDC', 'OKB']).join(','));
   const [allowedProtocolsInput, setAllowedProtocolsInput] = useState((allowedProtocols && allowedProtocols.length > 0 ? allowedProtocols : ['okx-aggregator', 'quickswap']).join(','));
+  const [memberAddressInput, setMemberAddressInput] = useState('');
+  const [memberPerTxInput, setMemberPerTxInput] = useState('1');
+  const [memberDailyInput, setMemberDailyInput] = useState('5');
+  const [memberEnabled, setMemberEnabled] = useState(true);
   const [busyAction, setBusyAction] = useState<ControlAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +197,22 @@ export function OperatorConsole({
         return;
       }
     }
+    if (action === 'set-member-policy') {
+      const memberPerTxValue = Number(memberPerTxInput);
+      const memberDailyValue = Number(memberDailyInput);
+      if (!memberAddressInput.trim().startsWith('0x')) {
+        setBusyAction(null);
+        setError('Set a valid member wallet address.');
+        return;
+      }
+      if (memberEnabled) {
+        if (!Number.isFinite(memberPerTxValue) || memberPerTxValue <= 0 || !Number.isFinite(memberDailyValue) || memberDailyValue <= 0) {
+          setBusyAction(null);
+          setError('Member per-tx and daily budgets must be positive numbers.');
+          return;
+        }
+      }
+    }
 
     try {
       const response = await fetch('/api/control', {
@@ -202,6 +230,14 @@ export function OperatorConsole({
                 allowedAssets: parseCsvText(allowedAssetsInput),
                 allowedProtocols: parseCsvText(allowedProtocolsInput),
                 expiryHours: expiryValue,
+              }
+            : undefined,
+          memberPolicy: action === 'set-member-policy'
+            ? {
+                memberAddress: memberAddressInput.trim(),
+                enabled: memberEnabled,
+                perTxUsd: Number(memberPerTxInput),
+                dailyBudgetUsd: Number(memberDailyInput),
               }
             : undefined,
         }),
@@ -324,6 +360,67 @@ export function OperatorConsole({
           className="note-input"
         />
       </div>
+
+      <details className="settings-advanced" open>
+        <summary>Member Wallet Budget</summary>
+        <div className="lease-config-grid">
+          <div className="note-row">
+            <label htmlFor="member-wallet" className="note-label">Member Wallet</label>
+            <input
+              id="member-wallet"
+              value={memberAddressInput}
+              onChange={(event) => setMemberAddressInput(event.target.value)}
+              placeholder="0x member wallet that can spend treasury funds"
+              className="note-input mono"
+            />
+          </div>
+          <div className="note-row">
+            <label htmlFor="member-per-tx" className="note-label">Member Per-Tx (USD)</label>
+            <input
+              id="member-per-tx"
+              value={memberPerTxInput}
+              onChange={(event) => setMemberPerTxInput(event.target.value)}
+              placeholder="1"
+              className="note-input"
+            />
+          </div>
+          <div className="note-row">
+            <label htmlFor="member-daily" className="note-label">Member Daily (USD)</label>
+            <input
+              id="member-daily"
+              value={memberDailyInput}
+              onChange={(event) => setMemberDailyInput(event.target.value)}
+              placeholder="5"
+              className="note-input"
+            />
+          </div>
+          <div className="note-row">
+            <label htmlFor="member-enabled" className="note-label">Policy Status</label>
+            <div className="checkbox-wrap">
+              <input
+                id="member-enabled"
+                type="checkbox"
+                checked={memberEnabled}
+                onChange={(event) => setMemberEnabled(event.target.checked)}
+              />
+              <span>{memberEnabled ? 'Enabled' : 'Disabled'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="action-row">
+          <div>
+            <button
+              type="button"
+              className="action-button primary"
+              disabled={busyAction !== null || !actionsEnabled}
+              onClick={() => runAction('set-member-policy')}
+            >
+              {busyAction === 'set-member-policy' ? 'Working...' : 'Save Member Budget'}
+            </button>
+            <div className="action-help">Owner writes per-member spending limits onchain. Any member request above this budget is reverted.</div>
+          </div>
+        </div>
+      </details>
 
       <div className="action-groups">
         {ACTION_GROUPS.map((group) => (

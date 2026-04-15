@@ -343,11 +343,19 @@ async function enqueueControllerWrite<T>(operation: () => Promise<T>): Promise<T
   return next;
 }
 
-async function writeController(config: ControllerConfig, functionName: 'issueLease' | 'setLeaseStatus' | 'setOperatorMode' | 'anchorReceipt', args: readonly unknown[]): Promise<Hex> {
+async function writeController(
+  config: ControllerConfig,
+  functionName: 'issueLease' | 'setLeaseStatus' | 'setOperatorMode' | 'setExecutor' | 'anchorReceipt',
+  args: readonly unknown[],
+): Promise<Hex> {
   return enqueueControllerWrite(() => writeControllerNow(config, functionName, args));
 }
 
-async function writeControllerNow(config: ControllerConfig, functionName: 'issueLease' | 'setLeaseStatus' | 'setOperatorMode' | 'anchorReceipt', args: readonly unknown[]): Promise<Hex> {
+async function writeControllerNow(
+  config: ControllerConfig,
+  functionName: 'issueLease' | 'setLeaseStatus' | 'setOperatorMode' | 'setExecutor' | 'anchorReceipt',
+  args: readonly unknown[],
+): Promise<Hex> {
   if (!config.controllerAddress) {
     throw new Error('Missing LEASE_CONTROLLER_ADDRESS.');
   }
@@ -411,6 +419,10 @@ export async function setLeaseStatusOnchain(config: ControllerConfig, leaseId: s
 
 export async function setOperatorModeOnchain(config: ControllerConfig, operator: OperatorLike): Promise<Hex> {
   return writeController(config, 'setOperatorMode', [operator.operatorName, operatorModeCode(operator.mode), hashText(operator.note)] as const);
+}
+
+export async function setExecutorOnchain(config: ControllerConfig, executor: Address, allowed: boolean): Promise<Hex> {
+  return writeController(config, 'setExecutor', [executor, allowed] as const);
 }
 
 export function buildArtifactUri(config: ControllerConfig, relativePath?: string): string {

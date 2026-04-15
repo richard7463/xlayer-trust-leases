@@ -139,9 +139,28 @@ export function SubmissionPage({
             <ol className="guide-list">
               <li>Choose the wallet to protect.</li>
               <li>Set rule limits: per-action max, daily budget, assets, and protocols.</li>
+              <li>Configure each member wallet budget onchain.</li>
               <li>Issue rule to X Layer contract.</li>
               <li>Watch every request become approve, resize, or block with proof.</li>
             </ol>
+            <div className="scope-grid">
+              <div>
+                <div className="scope-title">Can Do Now</div>
+                <ul className="scope-list">
+                  <li>Issue/revoke rule onchain.</li>
+                  <li>Pause/review/resume operator mode.</li>
+                  <li>Set per-member budget policy.</li>
+                  <li>Anchor receipts and tx proof.</li>
+                </ul>
+              </div>
+              <div>
+                <div className="scope-title">Not Automatic Yet</div>
+                <ul className="scope-list">
+                  <li>Does not block manual wallet transfers outside this flow.</li>
+                  <li>Hard lock requires vault mode where funds stay in contract.</li>
+                </ul>
+              </div>
+            </div>
             <div className="scope-note">
               Scope note: these limits apply to agent requests executed through Boundless runtime/controller. Direct wallet transfers outside this flow are not blocked.
             </div>
@@ -315,7 +334,7 @@ export function SubmissionPage({
                         </span>
                       </td>
                       <td className="mono">{shortHash(round.txHash)}</td>
-                      <td style={{ fontSize: '11px', color: 'var(--s1)' }}>{round.summary}</td>
+                      <td className="history-summary-cell">{round.summary}</td>
                     </tr>
                   ))
                 ) : (

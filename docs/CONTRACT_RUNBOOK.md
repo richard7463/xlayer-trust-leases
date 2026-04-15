@@ -21,8 +21,11 @@ Useful commands from the repo root:
 
 ```bash
 npm run contracts:compile
+npm run contracts:test
 npm run contracts:deploy:testnet
 npm run contracts:deploy:mainnet
+npm run contracts:deploy:guard:testnet
+npm run contracts:deploy:guard:mainnet
 ```
 
 ## Required environment
@@ -70,6 +73,38 @@ Hosted behavior:
   - txHash
   - proofHash
   - artifactUri
+
+## Hard-Guard Contract Mode (Vault)
+
+If you want strict spend control (funds locked in contract, not loose EOA wallet), deploy guard mode:
+
+1. Set env:
+
+```bash
+BOUNDLESS_VAULT_OWNER=0xYourEOA
+LEASE_CONSUMER_NAME=strategy-office
+LEASE_OPERATOR_NAME=human-principal
+```
+
+2. Deploy:
+
+```bash
+npm run contracts:deploy:guard:mainnet
+```
+
+This deploys:
+- `TrustLeaseController`
+- `BoundlessVault`
+- and auto-authorizes vault as controller executor (`setExecutor(vault, true)`).
+
+3. Configure vault after deploy:
+- set member wallet policy (`setMemberPolicy`) with per-tx and daily budget
+- allow token contracts (`setAllowedAsset`)
+- allow protocol target contracts (`setAllowedProtocol`)
+- set lease context to active lease id (`setLeaseContext`)
+- deposit funds into vault (`depositToken`)
+
+In this mode, budget checks are enforced by `enforceAndConsume` onchain before each vault execution.
 
 ## Current architecture split
 

@@ -1,15 +1,24 @@
 import { execFileSync } from 'node:child_process';
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
-import { isAddress } from 'viem';
+import { isAddress, type Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { getSiteData, writeCanonicalLatestIfNeeded } from '@/lib/site-data';
 import { canWriteController, issueLeaseOnchain, readControllerConfig, readOnchainActiveLease, setLeaseStatusOnchain, setOperatorModeOnchain } from '@/lib/trust-lease-controller';
+import { readBoundlessVaultConfig, setMemberPolicyOnchain } from '@/lib/boundless-vault';
 import { parseCsvList, readRuntimeEnv } from '../../../src/config/env';
 
 export const dynamic = 'force-dynamic';
 
-type ControlAction = 'issue-lease' | 'revoke-lease' | 'pause' | 'review' | 'resume' | 'run-round' | 'refresh-proof';
+type ControlAction =
+  | 'issue-lease'
+  | 'revoke-lease'
+  | 'pause'
+  | 'review'
+  | 'resume'
+  | 'run-round'
+  | 'refresh-proof'
+  | 'set-member-policy';
 
 type LeaseOverridesInput = {
   baseAsset?: string;
@@ -18,6 +27,13 @@ type LeaseOverridesInput = {
   allowedAssets?: string[];
   allowedProtocols?: string[];
   expiryHours?: number;
+};
+
+type MemberPolicyInput = {
+  memberAddress?: string;
+  enabled?: boolean;
+  perTxUsd?: number;
+  dailyBudgetUsd?: number;
 };
 
 function isHostedReadonlyRuntime(): boolean {
@@ -141,6 +157,7 @@ async function runHostedControlAction(
   note?: string,
   requestedWalletAddress?: string,
   leaseOverrides?: LeaseOverridesInput,
+  memberPolicy?: MemberPolicyInput,
 ) {
   const env = readRuntimeEnv(process.env);
   const controllerConfig = readControllerConfig(process.env);
@@ -192,6 +209,29 @@ async function runHostedControlAction(
     }
     case 'refresh-proof':
       return 'refreshed=controller-state';
+    case 'set-member-policy': {
+      const vaultConfig = readBoundlessVaultConfig(process.env);
+      if (!vaultConfig.vaultAddress || !vaultConfig.writerPrivateKey) {
+        throw new Error('Hosted member policy requires BOUNDLESS_VAULT_ADDRESS and writer key.');
+      }
+      const member = memberPolicy?.memberAddress;
+      if (!member || !isAddress(member)) {
+        throw new Error('Set a valid member wallet address.');
+      }
+      const perTxUsd = Number(memberPolicy?.perTxUsd ?? 0);
+      const dailyBudgetUsd = Number(memberPolicy?.dailyBudgetUsd ?? 0);
+      const enabled = Boolean(memberPolicy?.enabled ?? true);
+      if (enabled && (!Number.isFinite(perTxUsd) || perTxUsd <= 0 || !Number.isFinite(dailyBudgetUsd) || dailyBudgetUsd <= 0)) {
+        throw new Error('Member per-tx and daily budgets must be positive.');
+      }
+      const txHash = await setMemberPolicyOnchain(vaultConfig, {
+        member: member as Address,
+        enabled,
+        perTxUsd,
+        dailyBudgetUsd,
+      });
+      return `vault_tx=${txHash}`;
+    }
     case 'run-round':
       throw new Error('Hosted run-round is not enabled yet. Use a writable runner for live or simulated round execution.');
     default:
@@ -241,6 +281,8 @@ function humanMessage(action: ControlAction, summary: Awaited<ReturnType<typeof 
       return 'Governed round complete.';
     case 'refresh-proof':
       return 'Visible proof refreshed from current artifacts.';
+    case 'set-member-policy':
+      return 'Member budget policy updated onchain.';
     default:
       return 'Action complete.';
   }
@@ -257,11 +299,13 @@ export async function POST(request: Request) {
       note?: string;
       walletAddress?: string;
       leaseOverrides?: LeaseOverridesInput;
+      memberPolicy?: MemberPolicyInput;
     };
     const action = body.action;
     const note = body.note?.trim();
     const walletAddress = body.walletAddress?.trim();
     const leaseOverrides = body.leaseOverrides;
+    const memberPolicy = body.memberPolicy;
 
     if (!action) {
       return NextResponse.json({ ok: false, error: 'Missing action.' }, { status: 400 });
@@ -270,7 +314,7 @@ export async function POST(request: Request) {
     let output = '';
 
     if (isHostedReadonlyRuntime()) {
-      output = await runHostedControlAction(action, note, walletAddress, leaseOverrides);
+      output = await runHostedControlAction(action, note, walletAddress, leaseOverrides, memberPolicy);
     } else {
       switch (action) {
         case 'issue-lease':
@@ -289,6 +333,9 @@ export async function POST(request: Request) {
           break;
         case 'refresh-proof':
           output = 'refreshed=current-artifacts';
+          break;
+        case 'set-member-policy':
+          output = await runHostedControlAction(action, note, walletAddress, leaseOverrides, memberPolicy);
           break;
         default:
           return NextResponse.json({ ok: false, error: 'Unsupported action.' }, { status: 400 });
