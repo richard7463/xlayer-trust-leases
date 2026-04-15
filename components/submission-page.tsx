@@ -3,6 +3,7 @@ import { formatTimestamp, formatUsd, ratio, shortHash, titleCase } from '@/lib/f
 import { deriveLeaseState, toneForExecution, toneForOutcome, toneForTrustZone } from '@/lib/runtime';
 import type { ProofPacket, RoundArtifactIndexEntry } from '@/lib/types';
 import { OperatorConsole } from '@/components/operator-console';
+import { TopWalletConnect } from '@/components/top-wallet-connect';
 
 type SubmissionPageProps = {
   packet: ProofPacket | null;
@@ -151,31 +152,41 @@ export function SubmissionPage({
             <div className="logo-sub">Agent Execution Guard</div>
           </div>
         </div>
-        <nav className="nav">
-          <Link href="/" className="nav-link">Home</Link>
-          <Link href="/submission" className="nav-link active">Dashboard</Link>
-          <Link href="/proof" className="nav-link">Proof</Link>
-        </nav>
+        <div className="header-right">
+          <nav className="nav">
+            <Link href="/" className="nav-link">Home</Link>
+            <Link href="/submission" className="nav-link active">Dashboard</Link>
+            <Link href="/proof" className="nav-link">Proof</Link>
+          </nav>
+          <TopWalletConnect />
+        </div>
       </header>
 
       <div className="card">
-        <h2>How To Read This Page</h2>
+        <h2>How Lease Works</h2>
         <p>
-          This page does two separate jobs. The top half shows what is live onchain right now for the wallet you are protecting.
-          The bottom half shows historical proof of what this system has previously approved or blocked.
+          Connect a wallet at the top-right, then issue a lease. The lease is the boundary the agent must obey.
         </p>
         <div className="info-grid">
           <div className="info-card">
-            <div className="k">Current Live Control</div>
-            <div className="v">Which wallet is protected, what the lease allows, and whether the agent is active, paused, or in review.</div>
+            <div className="k">Per-Tx Max</div>
+            <div className="v">{formatUsd(liveLease?.perTxUsd ?? 3)} per action</div>
           </div>
           <div className="info-card">
-            <div className="k">Operator Console</div>
-            <div className="v">Your control surface for issuing a lease or changing the operator posture.</div>
+            <div className="k">Daily Budget</div>
+            <div className="v">{formatUsd(liveLease?.dailyBudgetUsd ?? 15)} per day</div>
           </div>
           <div className="info-card">
-            <div className="k">Historical Proof</div>
-            <div className="v">Past approved txs and past blocked requests. These may belong to an older lease if you just changed the wallet.</div>
+            <div className="k">Allowed Assets</div>
+            <div className="v">{liveLease?.allowedAssets?.join(', ') || 'USDT0, USDC, OKB'}</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Allowed Protocols</div>
+            <div className="v">{liveLease?.allowedProtocols?.join(', ') || 'okx-aggregator, quickswap'}</div>
+          </div>
+          <div className="info-card">
+            <div className="k">Expiry</div>
+            <div className="v">{formatTimestamp(liveLease?.expiresAt)}</div>
           </div>
         </div>
       </div>
@@ -249,6 +260,11 @@ export function SubmissionPage({
         controllerAddress={controller.address}
         controllerSource={controller.source}
         governedWallet={liveLease?.walletAddress}
+        baseAsset={liveLease?.baseAsset}
+        perTxUsd={liveLease?.perTxUsd}
+        dailyBudgetUsd={liveLease?.dailyBudgetUsd}
+        allowedAssets={liveLease?.allowedAssets}
+        allowedProtocols={liveLease?.allowedProtocols}
         actionsEnabled={controller.actionsEnabled}
         runRoundEnabled={controller.runRoundEnabled}
         controllerNote={controller.note}

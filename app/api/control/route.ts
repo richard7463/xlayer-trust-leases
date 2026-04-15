@@ -11,6 +11,15 @@ export const dynamic = 'force-dynamic';
 
 type ControlAction = 'issue-lease' | 'revoke-lease' | 'pause' | 'review' | 'resume' | 'run-round' | 'refresh-proof';
 
+type LeaseOverridesInput = {
+  baseAsset?: string;
+  perTxUsd?: number;
+  dailyBudgetUsd?: number;
+  allowedAssets?: string[];
+  allowedProtocols?: string[];
+  expiryHours?: number;
+};
+
 function isHostedReadonlyRuntime(): boolean {
   return Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
 }
@@ -36,9 +45,55 @@ function getHostedSettlementAddress(env: ReturnType<typeof readRuntimeEnv>): str
   return privateKey ? privateKeyToAccount(privateKey).address : undefined;
 }
 
-function buildHostedLease(env: ReturnType<typeof readRuntimeEnv>, walletAddress: string, note?: string) {
+function sanitizeSymbol(symbol: string): string {
+  return symbol.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+}
+
+function sanitizeProtocol(protocol: string): string {
+  return protocol.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+}
+
+function sanitizeList(values: string[] | undefined, fallback: string[], normalize: (value: string) => string): string[] {
+  if (!values || values.length === 0) {
+    return fallback;
+  }
+  const deduped = Array.from(
+    new Set(
+      values
+        .map((value) => normalize(value))
+        .filter((value) => value.length > 0),
+    ),
+  );
+  return deduped.length > 0 ? deduped : fallback;
+}
+
+function clampPositiveNumber(value: number | undefined, fallback: number): number {
+  if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value) || value <= 0) {
+    return fallback;
+  }
+  return value;
+}
+
+function buildHostedLease(
+  env: ReturnType<typeof readRuntimeEnv>,
+  walletAddress: string,
+  note?: string,
+  overrides?: LeaseOverridesInput,
+) {
+  const baseAsset = sanitizeSymbol(overrides?.baseAsset || env.LEASE_DEFAULT_BASE_ASSET) || env.LEASE_DEFAULT_BASE_ASSET;
+  const perTxUsd = clampPositiveNumber(overrides?.perTxUsd, env.LEASE_PER_TX_USD);
+  const dailyBudgetUsd = Math.max(
+    clampPositiveNumber(overrides?.dailyBudgetUsd, env.LEASE_DAILY_BUDGET_USD),
+    perTxUsd,
+  );
+  const expiryHours = Math.min(
+    Math.max(clampPositiveNumber(overrides?.expiryHours, env.LEASE_EXPIRY_HOURS), 1),
+    168,
+  );
+  const allowedAssets = sanitizeList(overrides?.allowedAssets, parseCsvList(env.LEASE_ALLOWED_ASSETS), sanitizeSymbol);
+  const allowedProtocols = sanitizeList(overrides?.allowedProtocols, parseCsvList(env.LEASE_ALLOWED_PROTOCOLS), sanitizeProtocol);
   const issuedAt = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + env.LEASE_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
   return {
     leaseId: `lease_${crypto.randomUUID()}`,
     issuedAt,
@@ -47,13 +102,13 @@ function buildHostedLease(env: ReturnType<typeof readRuntimeEnv>, walletAddress:
     ownerLabel: env.LEASE_ISSUER_LABEL,
     consumerName: env.LEASE_CONSUMER_NAME,
     walletAddress,
-    baseAsset: env.LEASE_DEFAULT_BASE_ASSET,
-    allowedAssets: parseCsvList(env.LEASE_ALLOWED_ASSETS),
-    allowedProtocols: parseCsvList(env.LEASE_ALLOWED_PROTOCOLS),
+    baseAsset,
+    allowedAssets,
+    allowedProtocols,
     allowedActions: parseCsvList(env.LEASE_ALLOWED_ACTIONS),
     counterpartyAllowlist: parseCsvList(env.LEASE_ALLOWED_COUNTERPARTIES),
-    perTxUsd: env.LEASE_PER_TX_USD,
-    dailyBudgetUsd: env.LEASE_DAILY_BUDGET_USD,
+    perTxUsd,
+    dailyBudgetUsd,
     trustRequirements: {
       reasonRequired: env.LEASE_REASON_REQUIRED,
       proofRequired: env.LEASE_REQUIRE_PROOF,
@@ -81,7 +136,12 @@ function publicControlError(error: unknown): string {
   return message.split('\n')[0]?.slice(0, 320) || 'Control action failed.';
 }
 
-async function runHostedControlAction(action: ControlAction, note?: string, requestedWalletAddress?: string) {
+async function runHostedControlAction(
+  action: ControlAction,
+  note?: string,
+  requestedWalletAddress?: string,
+  leaseOverrides?: LeaseOverridesInput,
+) {
   const env = readRuntimeEnv(process.env);
   const controllerConfig = readControllerConfig(process.env);
 
@@ -98,7 +158,7 @@ async function runHostedControlAction(action: ControlAction, note?: string, requ
       if (!walletAddress) {
         throw new Error('Missing treasury wallet address for hosted lease issuance.');
       }
-      const issuedLease = buildHostedLease(env, walletAddress, note);
+      const issuedLease = buildHostedLease(env, walletAddress, note, leaseOverrides);
       const txHash = await issueLeaseOnchain(controllerConfig, issuedLease);
       if (activeLease?.status === 'active') {
         try {
@@ -192,10 +252,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json().catch(() => ({}))) as { action?: ControlAction; note?: string; walletAddress?: string };
+    const body = (await request.json().catch(() => ({}))) as {
+      action?: ControlAction;
+      note?: string;
+      walletAddress?: string;
+      leaseOverrides?: LeaseOverridesInput;
+    };
     const action = body.action;
     const note = body.note?.trim();
     const walletAddress = body.walletAddress?.trim();
+    const leaseOverrides = body.leaseOverrides;
 
     if (!action) {
       return NextResponse.json({ ok: false, error: 'Missing action.' }, { status: 400 });
@@ -204,7 +270,7 @@ export async function POST(request: Request) {
     let output = '';
 
     if (isHostedReadonlyRuntime()) {
-      output = await runHostedControlAction(action, note, walletAddress);
+      output = await runHostedControlAction(action, note, walletAddress, leaseOverrides);
     } else {
       switch (action) {
         case 'issue-lease':

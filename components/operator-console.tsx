@@ -1,17 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-type EthereumProvider = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-};
-
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
-}
+const CONNECTED_WALLET_STORAGE_KEY = 'trust-leases.connected-wallet';
 
 type OperatorConsoleProps = {
   leaseId?: string | null;
@@ -22,6 +14,11 @@ type OperatorConsoleProps = {
   controllerAddress?: string | null;
   controllerSource?: 'local' | 'onchain';
   governedWallet?: string | null;
+  baseAsset?: string | null;
+  perTxUsd?: number | null;
+  dailyBudgetUsd?: number | null;
+  allowedAssets?: string[] | null;
+  allowedProtocols?: string[] | null;
   actionsEnabled?: boolean;
   runRoundEnabled?: boolean;
   controllerNote?: string | null;
@@ -36,26 +33,33 @@ const ACTION_GROUPS: Array<{
   {
     label: 'Lease',
     actions: [
-      { action: 'issue-lease', label: 'Issue Lease', help: 'Create or replace the wallet permission on X Layer.', tone: 'primary' },
-      { action: 'revoke-lease', label: 'Revoke', help: 'Cancel the agent permission immediately.', tone: 'warn' },
+      { action: 'issue-lease', label: 'Issue Lease', help: 'Write or replace this lease on X Layer with the parameters above.', tone: 'primary' },
+      { action: 'revoke-lease', label: 'Revoke', help: 'Cancel the current lease immediately.', tone: 'warn' },
     ],
   },
   {
     label: 'Operator',
     actions: [
       { action: 'pause', label: 'Pause', help: 'Stop autonomous execution until resumed.', tone: 'warn' },
-      { action: 'review', label: 'Review', help: 'Require a human review posture before execution.', tone: 'warn' },
-      { action: 'resume', label: 'Resume', help: 'Return the agent to active governed mode.', tone: 'primary' },
+      { action: 'review', label: 'Review', help: 'Require manual review before execution.', tone: 'warn' },
+      { action: 'resume', label: 'Resume', help: 'Return to active governed execution.', tone: 'primary' },
     ],
   },
   {
     label: 'Runtime',
     actions: [
-      { action: 'run-round', label: 'Run Round', help: 'Ask the runner to create the next agent request.', tone: 'primary' },
-      { action: 'refresh-proof', label: 'Refresh Proof', help: 'Reload the latest lease, receipt, and proof data.', tone: 'neutral' },
+      { action: 'run-round', label: 'Run Round', help: 'Ask the runner to create the next request.', tone: 'primary' },
+      { action: 'refresh-proof', label: 'Refresh Proof', help: 'Reload lease, receipt, and dashboard proof.', tone: 'neutral' },
     ],
   },
 ];
+
+function parseCsvText(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export function OperatorConsole({
   leaseId,
@@ -66,6 +70,11 @@ export function OperatorConsole({
   controllerAddress,
   controllerSource,
   governedWallet,
+  baseAsset,
+  perTxUsd,
+  dailyBudgetUsd,
+  allowedAssets,
+  allowedProtocols,
   actionsEnabled = true,
   runRoundEnabled = true,
   controllerNote,
@@ -73,10 +82,71 @@ export function OperatorConsole({
   const router = useRouter();
   const [note, setNote] = useState('');
   const [walletAddress, setWalletAddress] = useState(governedWallet ?? '');
-  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
+  const [baseAssetInput, setBaseAssetInput] = useState((baseAsset ?? 'USDT0').toUpperCase());
+  const [perTxUsdInput, setPerTxUsdInput] = useState(String(perTxUsd ?? 3));
+  const [dailyBudgetUsdInput, setDailyBudgetUsdInput] = useState(String(dailyBudgetUsd ?? 15));
+  const [expiryHoursInput, setExpiryHoursInput] = useState('24');
+  const [allowedAssetsInput, setAllowedAssetsInput] = useState((allowedAssets && allowedAssets.length > 0 ? allowedAssets : ['USDT0', 'USDC', 'OKB']).join(','));
+  const [allowedProtocolsInput, setAllowedProtocolsInput] = useState((allowedProtocols && allowedProtocols.length > 0 ? allowedProtocols : ['okx-aggregator', 'quickswap']).join(','));
   const [busyAction, setBusyAction] = useState<ControlAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (governedWallet) {
+      setWalletAddress(governedWallet);
+    }
+  }, [governedWallet]);
+
+  useEffect(() => {
+    if (baseAsset) {
+      setBaseAssetInput(baseAsset.toUpperCase());
+    }
+  }, [baseAsset]);
+
+  useEffect(() => {
+    if (typeof perTxUsd === 'number' && Number.isFinite(perTxUsd)) {
+      setPerTxUsdInput(String(perTxUsd));
+    }
+  }, [perTxUsd]);
+
+  useEffect(() => {
+    if (typeof dailyBudgetUsd === 'number' && Number.isFinite(dailyBudgetUsd)) {
+      setDailyBudgetUsdInput(String(dailyBudgetUsd));
+    }
+  }, [dailyBudgetUsd]);
+
+  useEffect(() => {
+    if (allowedAssets && allowedAssets.length > 0) {
+      setAllowedAssetsInput(allowedAssets.join(','));
+    }
+  }, [allowedAssets]);
+
+  useEffect(() => {
+    if (allowedProtocols && allowedProtocols.length > 0) {
+      setAllowedProtocolsInput(allowedProtocols.join(','));
+    }
+  }, [allowedProtocols]);
+
+  useEffect(() => {
+    const cachedWallet = window.localStorage.getItem(CONNECTED_WALLET_STORAGE_KEY);
+    if (cachedWallet) {
+      setWalletAddress(cachedWallet);
+    }
+
+    const handleWalletUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ address?: string }>).detail;
+      if (!detail?.address) {
+        return;
+      }
+      setWalletAddress(detail.address);
+    };
+
+    window.addEventListener('trust-leases-wallet-updated', handleWalletUpdated);
+    return () => {
+      window.removeEventListener('trust-leases-wallet-updated', handleWalletUpdated);
+    };
+  }, []);
 
   const meta = useMemo(
     () => [
@@ -86,7 +156,7 @@ export function OperatorConsole({
       controllerAddress ? `Controller: ${controllerSource === 'onchain' ? 'X Layer' : 'Local'} ${controllerAddress}` : 'Controller: local runtime',
       latestSuccessTxHash ? `Latest success: ${latestSuccessTxHash}` : 'Latest success: none yet',
     ],
-    [leaseId, leaseStatus, operatorMode, controllerAddress, controllerSource, latestSuccessTxHash]
+    [leaseId, leaseStatus, operatorMode, controllerAddress, controllerSource, latestSuccessTxHash],
   );
 
   async function runAction(action: ControlAction) {
@@ -94,11 +164,47 @@ export function OperatorConsole({
     setMessage(null);
     setError(null);
 
+    const perTxValue = Number(perTxUsdInput);
+    const dailyValue = Number(dailyBudgetUsdInput);
+    const expiryValue = Number(expiryHoursInput);
+
+    if (action === 'issue-lease') {
+      if (!walletAddress.trim().startsWith('0x')) {
+        setBusyAction(null);
+        setError('Set a valid governed wallet address before issuing a lease.');
+        return;
+      }
+      if (!Number.isFinite(perTxValue) || perTxValue <= 0 || !Number.isFinite(dailyValue) || dailyValue <= 0) {
+        setBusyAction(null);
+        setError('Per-tx and daily budget must be positive numbers.');
+        return;
+      }
+      if (!Number.isFinite(expiryValue) || expiryValue <= 0) {
+        setBusyAction(null);
+        setError('Expiry hours must be a positive number.');
+        return;
+      }
+    }
+
     try {
       const response = await fetch('/api/control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, note, walletAddress }),
+        body: JSON.stringify({
+          action,
+          note,
+          walletAddress,
+          leaseOverrides: action === 'issue-lease'
+            ? {
+                baseAsset: baseAssetInput.trim().toUpperCase(),
+                perTxUsd: perTxValue,
+                dailyBudgetUsd: dailyValue,
+                allowedAssets: parseCsvText(allowedAssetsInput),
+                allowedProtocols: parseCsvText(allowedProtocolsInput),
+                expiryHours: expiryValue,
+              }
+            : undefined,
+        }),
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok) {
@@ -116,54 +222,11 @@ export function OperatorConsole({
     }
   }
 
-  async function connectWallet() {
-    setMessage(null);
-    setError(null);
-
-    try {
-      if (!window.ethereum) {
-        throw new Error('No browser wallet found. Install OKX Wallet, MetaMask, or another EVM wallet first.');
-      }
-
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
-      const account = accounts[0];
-      if (!account) {
-        throw new Error('Wallet did not return an account.');
-      }
-
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xc4' }],
-        });
-      } catch {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: '0xc4',
-            chainName: 'X Layer',
-            nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
-            rpcUrls: ['https://xlayer.drpc.org'],
-            blockExplorerUrls: ['https://www.oklink.com/xlayer'],
-          }],
-        });
-      }
-
-      setConnectedWallet(account);
-      setWalletAddress(account);
-      setMessage('Wallet connected. This address is now the governed wallet for the next lease.');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Wallet connection failed.');
-    }
-  }
-
   return (
     <div className="card">
-      <h2>Operator Console</h2>
+      <h2>Lease Control Console</h2>
       <p>
-        {actionsEnabled
-          ? 'Use this panel like a spending remote control. Pick the wallet the agent may use, issue a bounded lease, then pause, review, resume, or revoke that authority.'
-          : 'This deployment is currently operating as a proof viewer. Use a writable runner for live control actions until the backend is fully externalized.'}
+        Configure the lease first, then issue it onchain. This is where you define budget, allowed assets, allowed protocols, and expiry for agent execution.
       </p>
 
       <div className="action-meta">
@@ -172,37 +235,87 @@ export function OperatorConsole({
         ))}
       </div>
 
-      <div className="connect-panel">
-        <div>
-          <div className="connect-title">Start here: connect the wallet you want to protect</div>
-          <div className="connect-copy">
-            This only reads your wallet address and switches to X Layer. The lease still limits what an agent can do.
-          </div>
+      <div className="lease-config-grid">
+        <div className="note-row">
+          <label htmlFor="governed-wallet" className="note-label">Governed Wallet</label>
+          <input
+            id="governed-wallet"
+            value={walletAddress}
+            onChange={(event) => setWalletAddress(event.target.value)}
+            placeholder="0x wallet controlled by lease policy"
+            className="note-input mono"
+          />
         </div>
-        <button type="button" className="action-button primary" onClick={connectWallet} disabled={busyAction !== null}>
-          {connectedWallet ? 'Wallet Connected' : 'Connect Wallet'}
-        </button>
+        <div className="note-row">
+          <label htmlFor="base-asset" className="note-label">Base Asset</label>
+          <input
+            id="base-asset"
+            value={baseAssetInput}
+            onChange={(event) => setBaseAssetInput(event.target.value.toUpperCase())}
+            placeholder="USDT0"
+            className="note-input"
+          />
+        </div>
+        <div className="note-row">
+          <label htmlFor="per-tx-usd" className="note-label">Per-Tx Limit (USD)</label>
+          <input
+            id="per-tx-usd"
+            value={perTxUsdInput}
+            onChange={(event) => setPerTxUsdInput(event.target.value)}
+            placeholder="3"
+            className="note-input"
+          />
+        </div>
+        <div className="note-row">
+          <label htmlFor="daily-budget-usd" className="note-label">Daily Budget (USD)</label>
+          <input
+            id="daily-budget-usd"
+            value={dailyBudgetUsdInput}
+            onChange={(event) => setDailyBudgetUsdInput(event.target.value)}
+            placeholder="15"
+            className="note-input"
+          />
+        </div>
+        <div className="note-row">
+          <label htmlFor="allowed-assets" className="note-label">Allowed Assets (CSV)</label>
+          <input
+            id="allowed-assets"
+            value={allowedAssetsInput}
+            onChange={(event) => setAllowedAssetsInput(event.target.value)}
+            placeholder="USDT0,USDC,OKB"
+            className="note-input"
+          />
+        </div>
+        <div className="note-row">
+          <label htmlFor="allowed-protocols" className="note-label">Allowed Protocols (CSV)</label>
+          <input
+            id="allowed-protocols"
+            value={allowedProtocolsInput}
+            onChange={(event) => setAllowedProtocolsInput(event.target.value)}
+            placeholder="okx-aggregator,quickswap"
+            className="note-input"
+          />
+        </div>
+        <div className="note-row">
+          <label htmlFor="expiry-hours" className="note-label">Expiry Hours</label>
+          <input
+            id="expiry-hours"
+            value={expiryHoursInput}
+            onChange={(event) => setExpiryHoursInput(event.target.value)}
+            placeholder="24"
+            className="note-input"
+          />
+        </div>
       </div>
 
       <div className="note-row">
-        <label htmlFor="operator-note" className="note-label">Action note</label>
+        <label htmlFor="operator-note" className="note-label">Action Note</label>
         <input
           id="operator-note"
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="optional reason, pause note, or lease note"
+          placeholder="optional lease note or operator command reason"
           className="note-input"
-        />
-      </div>
-
-      <div className="note-row">
-        <label htmlFor="governed-wallet" className="note-label">Governed wallet</label>
-        <input
-          id="governed-wallet"
-          value={walletAddress}
-          onChange={(event) => setWalletAddress(event.target.value)}
-          placeholder="0x wallet that the agent is allowed to operate inside"
-          className="note-input mono"
         />
       </div>
 

@@ -86,6 +86,11 @@ button {
   align-items: center;
   gap: 8px;
 }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .nav-link {
   padding: 10px 16px;
   font-size: 13px;
@@ -101,6 +106,29 @@ button {
 .nav-link.active {
   color: #000;
   background: var(--lime);
+}
+.nav-wallet-wrap {
+  display: flex;
+  align-items: center;
+}
+.nav-wallet-btn {
+  border: 1px solid rgba(217, 249, 157, 0.45);
+  background: rgba(217, 249, 157, 0.1);
+  color: var(--lime);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 12px;
+  min-width: 138px;
+  text-align: center;
+}
+.nav-wallet-btn:hover {
+  border-color: var(--lime);
+  background: rgba(217, 249, 157, 0.16);
+}
+.nav-wallet-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 /* Hero */
@@ -906,6 +934,12 @@ td {
   grid-template-columns: 1.05fr 1.3fr 1.05fr;
   gap: 12px;
 }
+.lease-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin-bottom: 12px;
+}
 .action-group {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.015);
@@ -984,11 +1018,24 @@ td {
 }
 
 @media (max-width: 700px) {
-  .connect-panel {
+  .lease-config-grid {
     grid-template-columns: 1fr;
   }
   .section-heading,
   .budget-panel-values {
     flex-direction: column;
+  }
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .header-right {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nav-wallet-btn {
+    width: 100%;
   }
 }
